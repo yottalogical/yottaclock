@@ -4,28 +4,20 @@ use axum::{
 };
 use tracing::error;
 
-pub struct InternalError(anyhow::Error);
+#[derive(thiserror::Error, Debug)]
+pub enum InternalError {
+    #[error("Fatal sqlx error: {0}")]
+    FatalSqlxError(#[from] sqlx::Error),
 
-pub type InternalResult<T> = std::result::Result<T, InternalError>;
-
-impl From<anyhow::Error> for InternalError {
-    fn from(error: anyhow::Error) -> Self {
-        Self(error)
-    }
+    #[error("Fatal askama error: {0}")]
+    FatalAskamaError(#[from] askama::Error),
 }
 
-// impl<E> From<E> for InternalError
-// where
-//     E: std::error::Error + Send + Sync + 'static,
-// {
-//     fn from(error: E) -> Self {
-//         Self(anyhow::Error::new(error))
-//     }
-// }
+pub type InternalResult<T, E = InternalError> = Result<T, E>;
 
 impl IntoResponse for InternalError {
     fn into_response(self) -> Response {
-        error!("{}", self.0);
+        error!("{}", self);
         StatusCode::INTERNAL_SERVER_ERROR.into_response()
     }
 }

@@ -14,12 +14,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "anyhow"
-version = "1.0.65"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "98161a4e3e2184da77bb14f02184cdd111e83bbbcc9979dfee3c44b9a85f5602"
-
-[[package]]
 name = "askama"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1761,11 +1755,11 @@ checksum = "c811ca4a8c853ef420abd8592ba53ddbbac90410fab6903b3e79972a631f7680"
 name = "yottaclock"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "askama",
  "axum",
  "dotenvy",
  "sqlx",
+ "thiserror",
  "tokio",
  "tower-http",
  "tracing",

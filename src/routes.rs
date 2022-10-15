@@ -12,5 +12,5 @@ pub async fn index(
     let user_id = session_token.get_user_id(&pool).await?;
 
     let template = templates::Index { user_id };
-    Ok(Html(template.render().unwrap()))
+    Ok(Html(template.render()?))
 }
