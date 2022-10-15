@@ -2,6 +2,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+use tracing::error;
 
 pub struct InternalError(anyhow::Error);
 
@@ -24,6 +25,7 @@ impl From<anyhow::Error> for InternalError {
 
 impl IntoResponse for InternalError {
     fn into_response(self) -> Response {
+        error!("{}", self.0);
         StatusCode::INTERNAL_SERVER_ERROR.into_response()
     }
 }

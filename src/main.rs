@@ -4,6 +4,8 @@ use axum::{extract::Extension, routing::get, Router};
 use dotenvy::dotenv;
 use sqlx::postgres::PgPoolOptions;
 use std::net::SocketAddr;
+use tower_http::trace::TraceLayer;
+use tracing::info;
 
 mod errors;
 mod routes;
@@ -13,6 +15,8 @@ mod templates;
 #[tokio::main]
 async fn main() {
     let _ = dotenv();
+
+    tracing_subscriber::fmt::init();
 
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL environmental variable");
 
@@ -29,11 +33,12 @@ async fn main() {
 
     let app = Router::new()
         .route("/", get(routes::index))
+        .layer(TraceLayer::new_for_http())
         .layer(Extension(pool));
 
-    println!("Server started!");
+    info!("Starting hyper server");
     axum::Server::bind(&SocketAddr::from(([0, 0, 0, 0], 8000)))
         .serve(app.into_make_service())
         .await
-        .unwrap();
+        .expect("Error running hyper server");
 }
