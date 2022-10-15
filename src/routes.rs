@@ -1,10 +1,17 @@
 use askama::Template;
-use axum::response::{Html, IntoResponse};
+use axum::{http::StatusCode, response::Html, Extension};
+use sqlx::PgPool;
 
+use crate::session::SessionToken;
 use crate::templates;
 
-pub async fn index() -> impl IntoResponse {
-    let template = templates::Index {};
+pub async fn index(
+    session_token: SessionToken,
+    pool: Extension<PgPool>,
+) -> Result<Html<String>, StatusCode> {
+    let Extension(pool) = pool;
+    let user_id = session_token.get_user_id(&pool).await?;
 
-    Html(template.render().unwrap())
+    let template = templates::Index { user_id };
+    Ok(Html(template.render().unwrap()))
 }
