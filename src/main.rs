@@ -1,8 +1,11 @@
+#![forbid(unsafe_code)]
+
 use axum::{extract::Extension, routing::get, Router};
 use dotenvy::dotenv;
 use sqlx::postgres::PgPoolOptions;
 use std::net::SocketAddr;
 
+mod errors;
 mod routes;
 mod session;
 mod templates;

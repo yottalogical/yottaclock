@@ -1,14 +1,13 @@
 use askama::Template;
-use axum::{http::StatusCode, response::Html, Extension};
+use axum::{response::Html, Extension};
 use sqlx::PgPool;
 
-use crate::session::SessionToken;
-use crate::templates;
+use crate::{errors::InternalResult, session::SessionToken, templates};
 
 pub async fn index(
     session_token: SessionToken,
     pool: Extension<PgPool>,
-) -> Result<Html<String>, StatusCode> {
+) -> InternalResult<Html<String>> {
     let Extension(pool) = pool;
     let user_id = session_token.get_user_id(&pool).await?;
 

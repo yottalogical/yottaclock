@@ -30,7 +30,7 @@ where
 }
 
 impl SessionToken {
-    pub async fn get_user_id<'a, A>(&self, connection: A) -> Result<Option<i32>, GetUserIdError>
+    pub async fn get_user_id<'a, A>(&self, connection: A) -> anyhow::Result<Option<i32>>
     where
         A: Acquire<'a, Database = Postgres>,
     {
@@ -49,16 +49,16 @@ impl SessionToken {
     }
 }
 
-pub struct GetUserIdError(sqlx::Error);
+// pub struct GetUserIdError(sqlx::Error);
 
-impl From<GetUserIdError> for StatusCode {
-    fn from(_: GetUserIdError) -> Self {
-        Self::INTERNAL_SERVER_ERROR
-    }
-}
+// impl From<GetUserIdError> for StatusCode {
+//     fn from(_: GetUserIdError) -> Self {
+//         Self::INTERNAL_SERVER_ERROR
+//     }
+// }
 
-impl From<sqlx::Error> for GetUserIdError {
-    fn from(e: sqlx::Error) -> Self {
-        Self(e)
-    }
-}
+// impl From<sqlx::Error> for GetUserIdError {
+//     fn from(e: sqlx::Error) -> Self {
+//         Self(e)
+//     }
+// }
