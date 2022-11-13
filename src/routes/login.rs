@@ -22,22 +22,27 @@ pub async fn post(
     Extension(pool): Extension<PgPool>,
     Form(form): Form<Login>,
 ) -> InternalResult<impl IntoResponse> {
-    sqlx::query!(
-        "INSERT INTO users(toggl_api_key) VALUES ($1) ON CONFLICT DO NOTHING",
+    let user = sqlx::query!(
+        "SELECT user_id FROM users WHERE toggl_api_key = $1",
         form.toggl_api_key
     )
-    .execute(&pool)
+    .fetch_optional(&pool)
     .await?;
 
-    let user = sqlx::query!(
-        "SELECT user_id, toggl_api_key FROM users WHERE toggl_api_key = $1",
-        form.toggl_api_key
-    )
-    .fetch_one(&pool)
-    .await?;
+    let user_id: i32 = if let Some(user) = user {
+        user.user_id
+    } else {
+        sqlx::query!(
+            "INSERT INTO users(toggl_api_key) VALUES ($1) RETURNING user_id",
+            form.toggl_api_key
+        )
+        .fetch_one(&pool)
+        .await?
+        .user_id
+    };
 
     Ok((
-        [new_session_cookie_header(user.user_id, &pool).await?],
+        [new_session_cookie_header(user_id, &pool).await?],
         Redirect::to("/"),
     ))
 }
