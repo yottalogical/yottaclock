@@ -1,6 +1,7 @@
 -- Add up migration script here
 CREATE TABLE users (
-    user_id SERIAL PRIMARY KEY
+    user_id SERIAL PRIMARY KEY,
+    toggl_api_key TEXT UNIQUE NOT NULL
 );
 
 CREATE TABLE session_tokens (

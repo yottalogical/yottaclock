@@ -1,5 +1,5 @@
 use axum::{
-    http::StatusCode,
+    http::{header::InvalidHeaderValue, StatusCode},
     response::{IntoResponse, Response},
 };
 use tracing::error;
@@ -11,6 +11,9 @@ pub enum InternalError {
 
     #[error("Fatal askama error: {0}")]
     FatalAskamaError(#[from] askama::Error),
+
+    #[error("Fatal InvalidHeaderValue error: {0}")]
+    FatalInvalidHeaderValueError(#[from] InvalidHeaderValue),
 }
 
 pub type InternalResult<T, E = InternalError> = Result<T, E>;

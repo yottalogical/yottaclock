@@ -1,6 +1,10 @@
 #![forbid(unsafe_code)]
 
-use axum::{extract::Extension, routing::get, Router};
+use axum::{
+    extract::Extension,
+    routing::{get, post},
+    Router,
+};
 use dotenvy::dotenv;
 use sqlx::postgres::PgPoolOptions;
 use std::net::SocketAddr;
@@ -31,7 +35,9 @@ async fn main() {
         .expect("Could not run database migrations");
 
     let app = Router::new()
-        .route("/", get(routes::index))
+        .route("/", get(routes::index::get))
+        .route("/login/", get(routes::login::get))
+        .route("/login/", post(routes::login::post))
         .layer(TraceLayer::new_for_http())
         .layer(Extension(pool));
 

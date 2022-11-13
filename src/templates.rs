@@ -5,3 +5,7 @@ use askama::Template;
 pub struct Index {
     pub user_id: Option<i32>,
 }
+
+#[derive(Template)]
+#[template(path = "login.html")]
+pub struct Login {}

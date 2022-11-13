@@ -2,12 +2,14 @@ use crate::errors::InternalResult;
 use axum::{
     async_trait,
     extract::{FromRequest, RequestParts, TypedHeader},
-    headers::Cookie,
-    http::StatusCode,
+    headers::{Cookie, HeaderName, HeaderValue},
+    http::{header::SET_COOKIE, StatusCode},
 };
-use sqlx::{Acquire, Postgres};
+use rand::distributions::{Alphanumeric, DistString};
+use sqlx::{Acquire, PgPool, Postgres};
+use std::env;
 
-const AXUM_SESSION_COOKIE_NAME: &str = "session";
+pub static AXUM_SESSION_COOKIE_NAME: &str = "session";
 
 pub struct SessionToken(Option<String>);
 
@@ -48,4 +50,34 @@ impl SessionToken {
             Ok(None)
         }
     }
+}
+
+pub async fn new_session_cookie_header(
+    user_id: i32,
+    pool: &PgPool,
+) -> InternalResult<(HeaderName, HeaderValue)> {
+    let session_token = Alphanumeric.sample_string(&mut rand::thread_rng(), 64);
+
+    sqlx::query!(
+        "INSERT INTO session_tokens(token, user_id) VALUES ($1, $2)",
+        session_token,
+        user_id
+    )
+    .execute(pool)
+    .await?;
+
+    let secure = if let Some(_) = env::var_os("YOTTACLOCK_INSECURE_COOKIES") {
+        ""
+    } else {
+        "Secure; "
+    };
+
+    Ok((
+        SET_COOKIE,
+        format!(
+            "{}={}; Max-Age=2592000; Path=/; {}HttpOnly; SameSite=Strict",
+            AXUM_SESSION_COOKIE_NAME, session_token, secure,
+        )
+        .parse()?,
+    ))
 }
