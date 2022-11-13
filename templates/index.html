@@ -5,11 +5,15 @@
 {% block body %}
 <h1>Hello, world!</h1>
 <p>
-    {% match user_id %}
-    {% when Some with (val) %}
-    Your user ID is {{ val }}
-    {% when None %}
-    You have no user id
-    {% endmatch %}
+    Your user ID is {{ user_id }}
 </p>
+
+<ul>
+    {% for goal in goals %}
+    <li>
+        <p>{{ goal.name }}</p>
+        <p>{{ goal.time }}</p>
+    </li>
+    {% endfor %}
+</ul>
 {% endblock %}
