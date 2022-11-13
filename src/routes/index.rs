@@ -1,17 +1,8 @@
-use crate::{errors::InternalResult, session::SessionToken, templates};
+use crate::{errors::InternalResult, session::UserId, templates};
 use askama::Template;
-use axum::{
-    response::{Html, IntoResponse},
-    Extension,
-};
-use sqlx::PgPool;
+use axum::response::{Html, IntoResponse};
 
-pub async fn get(
-    session_token: SessionToken,
-    Extension(pool): Extension<PgPool>,
-) -> InternalResult<impl IntoResponse> {
-    let user_id = session_token.get_user_id(&pool).await?;
-
+pub async fn get(UserId(user_id): UserId) -> InternalResult<impl IntoResponse> {
     let template = templates::Index { user_id };
     Ok(Html(template.render()?))
 }

@@ -1,53 +1,49 @@
 use crate::errors::InternalResult;
 use axum::{
     async_trait,
-    extract::{FromRequest, RequestParts, TypedHeader},
+    extract::{Extension, FromRequest, RequestParts, TypedHeader},
     headers::{Cookie, HeaderName, HeaderValue},
     http::{header::SET_COOKIE, StatusCode},
 };
 use rand::distributions::{Alphanumeric, DistString};
-use sqlx::{Acquire, PgPool, Postgres};
+use sqlx::PgPool;
 use std::env;
 
 pub static AXUM_SESSION_COOKIE_NAME: &str = "session";
 
-pub struct SessionToken(Option<String>);
+pub struct UserId(pub Option<i32>);
 
 #[async_trait]
-impl<B> FromRequest<B> for SessionToken
+impl<B> FromRequest<B> for UserId
 where
     B: Send,
 {
-    type Rejection = (StatusCode, &'static str);
+    type Rejection = StatusCode;
 
     async fn from_request(req: &mut RequestParts<B>) -> Result<Self, Self::Rejection> {
-        Ok(Self(
-            Option::<TypedHeader<Cookie>>::from_request(req)
+        let typed_headers = Option::<TypedHeader<Cookie>>::from_request(req)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        let token = typed_headers
+            .as_ref()
+            .and_then(|c| c.get(AXUM_SESSION_COOKIE_NAME));
+
+        if let Some(token) = token {
+            let Extension(pool) = Extension::from_request(req)
                 .await
-                .unwrap() // Infallible
-                .as_ref()
-                .and_then(|c| c.get(AXUM_SESSION_COOKIE_NAME))
-                .map(|c| c.into()),
-        ))
-    }
-}
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-impl SessionToken {
-    pub async fn get_user_id<'a, A>(&self, connection: A) -> InternalResult<Option<i32>>
-    where
-        A: Acquire<'a, Database = Postgres>,
-    {
-        if let Self(Some(token)) = self {
-            let mut conn = connection.acquire().await?;
+            let user_id =
+                sqlx::query!("SELECT user_id FROM session_tokens WHERE token = $1", token)
+                    .fetch_optional(&pool)
+                    .await
+                    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+                    .map(|s| s.user_id);
 
-            let s = sqlx::query!("SELECT user_id FROM session_tokens WHERE token = $1", token)
-                .fetch_optional(&mut *conn)
-                .await?
-                .map(|s| s.user_id);
-
-            Ok(s)
+            Ok(Self(user_id))
         } else {
-            Ok(None)
+            Ok(Self(None))
         }
     }
 }
