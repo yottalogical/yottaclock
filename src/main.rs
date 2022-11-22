@@ -14,7 +14,6 @@ use tracing::info;
 mod errors;
 mod routes;
 mod session;
-mod templates;
 mod toggl;
 
 #[tokio::main]

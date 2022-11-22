@@ -1,4 +1,4 @@
-use crate::{errors::InternalResult, session::new_session_cookie_header, templates};
+use crate::{errors::InternalResult, session::new_session_cookie_header};
 use askama::Template;
 use axum::{
     extract::Form,
@@ -8,19 +8,23 @@ use axum::{
 use serde::Deserialize;
 use sqlx::PgPool;
 
-#[derive(Deserialize)]
-pub struct Login {
-    toggl_api_key: String,
-}
+#[derive(Template)]
+#[template(path = "login.html")]
+pub struct LoginTemplate {}
 
 pub async fn get() -> InternalResult<impl IntoResponse> {
-    let template = templates::Login {};
+    let template = LoginTemplate {};
     Ok(Html(template.render()?))
+}
+
+#[derive(Deserialize)]
+pub struct LoginForm {
+    toggl_api_key: String,
 }
 
 pub async fn post(
     Extension(pool): Extension<PgPool>,
-    Form(form): Form<Login>,
+    Form(form): Form<LoginForm>,
 ) -> InternalResult<impl IntoResponse> {
     let user = sqlx::query!(
         "SELECT user_id FROM users WHERE toggl_api_key = $1",
