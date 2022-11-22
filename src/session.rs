@@ -1,50 +1,53 @@
 use crate::errors::InternalResult;
 use axum::{
     async_trait,
+    body::BoxBody,
     extract::{Extension, FromRequest, RequestParts, TypedHeader},
     headers::{Cookie, HeaderName, HeaderValue},
-    http::{header::SET_COOKIE, StatusCode},
+    http::{header::SET_COOKIE, Response, StatusCode},
+    response::{IntoResponse, Redirect},
 };
 use rand::distributions::{Alphanumeric, DistString};
 use sqlx::PgPool;
 use std::env;
 
-pub static AXUM_SESSION_COOKIE_NAME: &str = "session";
+pub static SESSION_COOKIE_NAME: &str = "session";
 
-pub struct UserId(pub Option<i32>);
+pub struct UserId(pub i32);
+
+fn to_internal_server_error<E>(_: E) -> Response<BoxBody> {
+    StatusCode::INTERNAL_SERVER_ERROR.into_response()
+}
 
 #[async_trait]
 impl<B> FromRequest<B> for UserId
 where
     B: Send,
 {
-    type Rejection = StatusCode;
+    type Rejection = Response<BoxBody>;
 
     async fn from_request(req: &mut RequestParts<B>) -> Result<Self, Self::Rejection> {
         let typed_headers = Option::<TypedHeader<Cookie>>::from_request(req)
             .await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            .map_err(to_internal_server_error)?;
 
         let token = typed_headers
             .as_ref()
-            .and_then(|c| c.get(AXUM_SESSION_COOKIE_NAME));
+            .and_then(|c| c.get(SESSION_COOKIE_NAME))
+            .ok_or(Redirect::to("/login/").into_response())?;
 
-        if let Some(token) = token {
-            let Extension(pool) = Extension::from_request(req)
-                .await
-                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        let Extension(pool) = Extension::from_request(req)
+            .await
+            .map_err(to_internal_server_error)?;
 
-            let user_id =
-                sqlx::query!("SELECT user_id FROM session_tokens WHERE token = $1", token)
-                    .fetch_optional(&pool)
-                    .await
-                    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-                    .map(|s| s.user_id);
+        let user_id = sqlx::query!("SELECT user_id FROM session_tokens WHERE token = $1", token)
+            .fetch_optional(&pool)
+            .await
+            .map_err(to_internal_server_error)?
+            .map(|s| s.user_id)
+            .ok_or(StatusCode::BAD_REQUEST.into_response())?;
 
-            Ok(Self(user_id))
-        } else {
-            Ok(Self(None))
-        }
+        Ok(Self(user_id))
     }
 }
 
@@ -72,7 +75,7 @@ pub async fn new_session_cookie_header(
         SET_COOKIE,
         format!(
             "{}={}; Max-Age=2592000; Path=/; {}HttpOnly; SameSite=Strict",
-            AXUM_SESSION_COOKIE_NAME, session_token, secure,
+            SESSION_COOKIE_NAME, session_token, secure,
         )
         .parse()?,
     ))

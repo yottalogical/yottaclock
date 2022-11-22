@@ -6,7 +6,7 @@ use crate::{
 use askama::Template;
 use axum::{
     extract::Extension,
-    response::{Html, IntoResponse, Redirect},
+    response::{Html, IntoResponse},
 };
 use chrono::Duration;
 use sqlx::PgPool;
@@ -49,17 +49,13 @@ pub async fn get(
     UserId(user_id): UserId,
     Extension(pool): Extension<PgPool>,
 ) -> InternalResult<impl IntoResponse> {
-    if let Some(user_id) = user_id {
-        let template = Index {
-            user_id,
-            goals: calculate_goals(user_id, pool)
-                .into_iter()
-                .map(|g| g.into())
-                .collect(),
-        };
+    let template = Index {
+        user_id,
+        goals: calculate_goals(user_id, pool)
+            .into_iter()
+            .map(|g| g.into())
+            .collect(),
+    };
 
-        Ok(Html(template.render()?).into_response())
-    } else {
-        Ok(Redirect::to("/login/").into_response())
-    }
+    Ok(Html(template.render()?).into_response())
 }
