@@ -6,6 +6,7 @@ use axum::{
     Router,
 };
 use dotenvy::dotenv;
+use reqwest::Client;
 use sqlx::postgres::PgPoolOptions;
 use std::net::SocketAddr;
 use tower_http::trace::TraceLayer;
@@ -34,12 +35,15 @@ async fn main() {
         .await
         .expect("Could not run database migrations");
 
+    let client = Client::new();
+
     let app = Router::new()
         .route("/", get(routes::index::get))
         .route("/login/", get(routes::login::get))
         .route("/login/", post(routes::login::post))
         .layer(TraceLayer::new_for_http())
-        .layer(Extension(pool));
+        .layer(Extension(pool))
+        .layer(Extension(client));
 
     info!("Starting hyper server");
     axum::Server::bind(&SocketAddr::from(([0, 0, 0, 0], 8000)))

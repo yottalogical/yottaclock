@@ -9,6 +9,7 @@ use axum::{
     response::{Html, IntoResponse},
 };
 use chrono::Duration;
+use reqwest::Client;
 use sqlx::PgPool;
 use std::fmt::{self, Display, Formatter};
 
@@ -48,10 +49,12 @@ pub struct Index {
 pub async fn get(
     UserId(user_id): UserId,
     Extension(pool): Extension<PgPool>,
+    Extension(client): Extension<Client>,
 ) -> InternalResult<impl IntoResponse> {
     let template = Index {
         user_id,
-        goals: calculate_goals(user_id, pool)
+        goals: calculate_goals(user_id, pool, client)
+            .await?
             .into_iter()
             .map(|g| g.into())
             .collect(),

@@ -2,6 +2,7 @@ use axum::{
     http::{header::InvalidHeaderValue, StatusCode},
     response::{IntoResponse, Response},
 };
+use tokio::task::JoinError;
 use tracing::error;
 
 #[derive(thiserror::Error, Debug)]
@@ -11,6 +12,12 @@ pub enum InternalError {
 
     #[error("Fatal askama error: {0}")]
     FatalAskamaError(#[from] askama::Error),
+
+    #[error("Fatal reqwest error: {0}")]
+    FatalReqwestError(#[from] reqwest::Error),
+
+    #[error("Fatal JoinError: {0}")]
+    FatalJoinError(#[from] JoinError),
 
     #[error("Fatal InvalidHeaderValue error: {0}")]
     FatalInvalidHeaderValueError(#[from] InvalidHeaderValue),
