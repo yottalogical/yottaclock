@@ -8,7 +8,7 @@ CREATE TABLE users (
 CREATE TABLE projects (
     user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     project_name TEXT NOT NULL,
-    project_id TEXT NOT NULL,
+    project_id INTEGER NOT NULL,
     starting_date DATE NOT NULL,
     daily_goal INTEGER NOT NULL
 );

@@ -1,10 +1,13 @@
-use crate::errors::InternalResult;
+use std::collections::HashMap;
+
 use chrono::{DateTime, Duration, FixedOffset, Local, NaiveDate};
 use futures::future;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use tracing::{trace, warn};
+
+use crate::errors::InternalResult;
 
 pub struct Goal {
     pub name: String,
@@ -28,13 +31,14 @@ struct TogglResponse {
 
 #[derive(Debug, Deserialize)]
 struct TogglResponseData {
-    pid: u32,
+    pid: i32,
     start: DateTime<FixedOffset>,
     dur: i64,
 }
 
 #[derive(Debug)]
 struct TogglEntry {
+    pid: i32,
     start: NaiveDate,
     dur: Duration,
 }
@@ -61,7 +65,7 @@ pub async fn calculate_goals(
     )
     .await?;
 
-    // todo!()
+    let r = filter_toggl_data(r, user_id, &pool).await?;
 
     Ok(vec![Goal {
         name: String::from("Example"),
@@ -85,6 +89,33 @@ async fn earliest_start_date(user_id: i32, pool: &PgPool) -> InternalResult<Naiv
     }
 
     Ok(earliest)
+}
+
+async fn filter_toggl_data(
+    toggl_entries: Vec<TogglEntry>,
+    user_id: i32,
+    pool: &PgPool,
+) -> InternalResult<Vec<TogglEntry>> {
+    let records: HashMap<i32, NaiveDate> = sqlx::query!(
+        "SELECT project_id, starting_date FROM projects WHERE user_id = $1",
+        user_id,
+    )
+    .fetch_all(pool)
+    .await?
+    .into_iter()
+    .map(|record| (record.project_id, record.starting_date))
+    .collect();
+
+    Ok(toggl_entries
+        .into_iter()
+        .filter(|toggl_entry| {
+            if let Some(project_start) = records.get(&toggl_entry.pid) {
+                toggl_entry.start >= *project_start
+            } else {
+                false
+            }
+        })
+        .collect())
 }
 
 async fn get_raw_toggl_data(
@@ -175,6 +206,7 @@ async fn call_api(
 impl From<TogglResponseData> for TogglEntry {
     fn from(other: TogglResponseData) -> Self {
         Self {
+            pid: other.pid,
             start: other.start.date_naive(),
             dur: Duration::milliseconds(other.dur),
         }
