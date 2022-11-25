@@ -1,7 +1,10 @@
+use std::str::FromStr;
+
 use axum::{
     http::{header::InvalidHeaderValue, StatusCode},
     response::{IntoResponse, Response},
 };
+use chrono_tz::Tz;
 use tokio::task::JoinError;
 use tracing::error;
 
@@ -21,6 +24,9 @@ pub enum InternalError {
 
     #[error("Fatal InvalidHeaderValue error: {0}")]
     FatalInvalidHeaderValueError(#[from] InvalidHeaderValue),
+
+    #[error("Fatal UnrecognizedTimezone error: {0}")]
+    FatalUnrecognizedTimezoneError(<Tz as FromStr>::Err),
 }
 
 pub type InternalResult<T, E = InternalError> = Result<T, E>;

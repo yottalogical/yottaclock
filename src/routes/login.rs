@@ -21,6 +21,8 @@ pub async fn get() -> InternalResult<impl IntoResponse> {
 pub struct LoginForm {
     toggl_api_key: String,
     workspace_id: String,
+    daily_max: i64,
+    timezone: String,
 }
 
 pub async fn post(
@@ -38,9 +40,11 @@ pub async fn post(
         user.user_id
     } else {
         sqlx::query!(
-            "INSERT INTO users(toggl_api_key, workspace_id) VALUES ($1, $2) RETURNING user_id",
+            "INSERT INTO users(toggl_api_key, workspace_id, daily_max, timezone) VALUES ($1, $2, $3, $4) RETURNING user_id",
             form.toggl_api_key,
-            form.workspace_id
+            form.workspace_id,
+            form.daily_max,
+            form.timezone,
         )
         .fetch_one(&pool)
         .await?

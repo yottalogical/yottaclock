@@ -2,7 +2,9 @@
 CREATE TABLE users (
     user_id SERIAL PRIMARY KEY,
     toggl_api_key TEXT UNIQUE NOT NULL,
-    workspace_id TEXT UNIQUE NOT NULL
+    workspace_id TEXT NOT NULL,
+    daily_max BIGINT NOT NULL,
+    timezone TEXT NOT NULL
 );
 
 CREATE TABLE projects (
@@ -10,7 +12,7 @@ CREATE TABLE projects (
     project_name TEXT NOT NULL,
     project_id INTEGER NOT NULL,
     starting_date DATE NOT NULL,
-    daily_goal INTEGER NOT NULL
+    daily_goal BIGINT NOT NULL
 );
 
 CREATE TABLE session_tokens (

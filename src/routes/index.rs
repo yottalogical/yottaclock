@@ -42,7 +42,7 @@ impl From<toggl::Goal> for Goal {
 #[derive(Template)]
 #[template(path = "index.html")]
 pub struct Index {
-    pub user_id: i32,
+    pub total_debt: HumanDuration,
     pub goals: Vec<Goal>,
 }
 
@@ -51,14 +51,12 @@ pub async fn get(
     Extension(pool): Extension<PgPool>,
     Extension(client): Extension<Client>,
 ) -> InternalResult<impl IntoResponse> {
+    let (goals, total_debt) = calculate_goals(user_id, pool, client).await?;
+
     let template = Index {
-        user_id,
-        goals: calculate_goals(user_id, pool, client)
-            .await?
-            .into_iter()
-            .map(|g| g.into())
-            .collect(),
+        total_debt: HumanDuration(total_debt),
+        goals: goals.into_iter().map(|g| g.into()).collect(),
     };
 
-    Ok(Html(template.render()?).into_response())
+    Ok(Html(template.render()?))
 }
