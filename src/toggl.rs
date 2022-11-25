@@ -3,7 +3,7 @@ use std::{
     collections::{HashMap, HashSet},
 };
 
-use chrono::{DateTime, Days, Duration, FixedOffset, NaiveDate, Utc};
+use chrono::{DateTime, Datelike, Days, Duration, FixedOffset, NaiveDate, Utc, Weekday};
 use chrono_tz::Tz;
 use futures::future;
 use reqwest::Client;
@@ -70,11 +70,23 @@ impl From<TogglResponseData> for TogglEntry {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+struct WhichWeekdays {
+    monday: bool,
+    tuesday: bool,
+    wednesday: bool,
+    thursday: bool,
+    friday: bool,
+    saturday: bool,
+    sunday: bool,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 struct Project {
     name: String,
     starting_date: NaiveDate,
     daily_goal: Duration,
     days_off: HashSet<NaiveDate>,
+    weekdays: WhichWeekdays,
 }
 
 #[derive(Debug, PartialEq)]
@@ -89,7 +101,9 @@ pub async fn calculate_goals(
     client: Client,
 ) -> InternalResult<(Vec<Goal>, Duration)> {
     let record = sqlx::query!(
-        "SELECT toggl_api_key, workspace_id, daily_max, timezone FROM users WHERE user_key = $1",
+        "SELECT toggl_api_key, workspace_id, daily_max, timezone
+        FROM users
+        WHERE user_key = $1",
         user_key.0,
     )
     .fetch_one(&pool)
@@ -131,7 +145,10 @@ async fn get_user_projects(
     pool: &PgPool,
 ) -> InternalResult<HashMap<ProjectId, Project>> {
     let records = sqlx::query!(
-        "SELECT project_key, project_id, project_name, starting_date, daily_goal FROM projects WHERE user_key = $1",
+        "SELECT project_key, project_id, project_name, starting_date, daily_goal,
+            monday, tuesday, wednesday, thursday, friday, saturday, sunday
+        FROM projects
+        WHERE user_key = $1",
         user_key.0,
     )
     .fetch_all(pool)
@@ -139,11 +156,25 @@ async fn get_user_projects(
 
     let futures = records.into_iter().map(|record| async move {
         let days_off = sqlx::query!(
-            "SELECT days_off.day_off FROM days_off INNER JOIN days_off_to_projects ON days_off.day_off_key = days_off_to_projects.day_off_key WHERE days_off_to_projects.project_key = $1",
+            "SELECT days_off.day_off
+            FROM days_off
+            INNER JOIN days_off_to_projects
+            ON days_off.day_off_key = days_off_to_projects.day_off_key
+            WHERE days_off_to_projects.project_key = $1",
             user_key.0,
         )
         .fetch_all(pool)
         .await?;
+
+        let weekdays = WhichWeekdays {
+            monday: record.monday,
+            tuesday: record.tuesday,
+            wednesday: record.wednesday,
+            thursday: record.thursday,
+            friday: record.friday,
+            saturday: record.saturday,
+            sunday: record.sunday,
+        };
 
         Ok((
             ProjectId(record.project_id),
@@ -152,6 +183,7 @@ async fn get_user_projects(
                 starting_date: record.starting_date,
                 daily_goal: Duration::seconds(record.daily_goal),
                 days_off: days_off.into_iter().map(|record| record.day_off).collect(),
+                weekdays,
             },
         ))
     });
@@ -386,6 +418,17 @@ impl Project {
 
         if self.days_off.contains(&date) {
             return false;
+        }
+
+        match date.weekday() {
+            Weekday::Mon if !self.weekdays.monday => return false,
+            Weekday::Tue if !self.weekdays.tuesday => return false,
+            Weekday::Wed if !self.weekdays.wednesday => return false,
+            Weekday::Thu if !self.weekdays.thursday => return false,
+            Weekday::Fri if !self.weekdays.friday => return false,
+            Weekday::Sat if !self.weekdays.saturday => return false,
+            Weekday::Sun if !self.weekdays.sunday => return false,
+            _ => (),
         }
 
         true

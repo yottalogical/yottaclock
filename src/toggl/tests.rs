@@ -15,6 +15,15 @@ fn test_total_debt_overflow() {
         starting_date: NaiveDate::from_ymd_opt(2000, 1, 1).unwrap(),
         daily_goal: Duration::hours(1),
         days_off: HashSet::new(),
+        weekdays: WhichWeekdays {
+            monday: true,
+            tuesday: true,
+            wednesday: true,
+            thursday: true,
+            friday: true,
+            saturday: true,
+            sunday: true,
+        },
     };
 
     let user_projects = HashMap::from([(project_id, example_project.clone())]);

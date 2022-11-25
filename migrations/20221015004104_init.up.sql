@@ -13,7 +13,15 @@ CREATE TABLE projects (
     project_name TEXT NOT NULL,
     project_id BIGINT NOT NULL,
     starting_date DATE NOT NULL,
-    daily_goal BIGINT NOT NULL
+    daily_goal BIGINT NOT NULL,
+
+    monday BOOLEAN NOT NULL,
+    tuesday BOOLEAN NOT NULL,
+    wednesday BOOLEAN NOT NULL,
+    thursday BOOLEAN NOT NULL,
+    friday BOOLEAN NOT NULL,
+    saturday BOOLEAN NOT NULL,
+    sunday BOOLEAN NOT NULL
 );
 
 CREATE TABLE days_off (
