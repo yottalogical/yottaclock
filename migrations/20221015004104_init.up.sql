@@ -21,7 +21,9 @@ CREATE TABLE projects (
     thursday BOOLEAN NOT NULL,
     friday BOOLEAN NOT NULL,
     saturday BOOLEAN NOT NULL,
-    sunday BOOLEAN NOT NULL
+    sunday BOOLEAN NOT NULL,
+
+    UNIQUE (user_key, project_id)
 );
 
 CREATE TABLE days_off (
