@@ -1,6 +1,6 @@
 use std::{
     cmp::{max, min},
-    collections::HashMap,
+    collections::{HashMap, HashSet},
 };
 
 use chrono::{DateTime, Days, Duration, FixedOffset, NaiveDate, Utc};
@@ -13,7 +13,7 @@ use tracing::{trace, warn};
 
 use crate::{
     errors::{InternalError, InternalResult},
-    session::UserId,
+    session::UserKey,
 };
 
 #[cfg(test)]
@@ -74,6 +74,7 @@ struct Project {
     name: String,
     starting_date: NaiveDate,
     daily_goal: Duration,
+    days_off: HashSet<NaiveDate>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -83,18 +84,18 @@ struct ProjectWithDebt {
 }
 
 pub async fn calculate_goals(
-    user_id: UserId,
+    user_key: UserKey,
     pool: PgPool,
     client: Client,
 ) -> InternalResult<(Vec<Goal>, Duration)> {
     let record = sqlx::query!(
-        "SELECT toggl_api_key, workspace_id, daily_max, timezone FROM users WHERE user_id = $1",
-        user_id.0,
+        "SELECT toggl_api_key, workspace_id, daily_max, timezone FROM users WHERE user_key = $1",
+        user_key.0,
     )
     .fetch_one(&pool)
     .await?;
 
-    let projects = get_user_projects(user_id, &pool).await?;
+    let projects = get_user_projects(user_key, &pool).await?;
 
     let earliest_start = earliest_start_date(&projects);
 
@@ -126,29 +127,44 @@ pub async fn calculate_goals(
 }
 
 async fn get_user_projects(
-    user_id: UserId,
+    user_key: UserKey,
     pool: &PgPool,
 ) -> InternalResult<HashMap<ProjectId, Project>> {
-    let query = sqlx::query!(
-        "SELECT project_id, project_name, starting_date, daily_goal FROM projects WHERE user_id = $1",
-        user_id.0,
-    );
+    let records = sqlx::query!(
+        "SELECT project_key, project_id, project_name, starting_date, daily_goal FROM projects WHERE user_key = $1",
+        user_key.0,
+    )
+    .fetch_all(pool)
+    .await?;
 
-    Ok(query
+    let futures = records.into_iter().map(|record| async move {
+        let days_off = sqlx::query!(
+            "SELECT days_off.day_off FROM days_off INNER JOIN days_off_to_projects ON days_off.day_off_key = days_off_to_projects.day_off_key WHERE days_off_to_projects.project_key = $1",
+            user_key.0,
+        )
         .fetch_all(pool)
-        .await?
+        .await?;
+
+        Ok((
+            ProjectId(record.project_id),
+            Project {
+                name: record.project_name,
+                starting_date: record.starting_date,
+                daily_goal: Duration::seconds(record.daily_goal),
+                days_off: days_off.into_iter().map(|record| record.day_off).collect(),
+            },
+        ))
+    });
+
+    let future_results: Vec<InternalResult<(ProjectId, Project)>> = future::join_all(futures).await;
+
+    future_results
         .into_iter()
-        .map(|record| {
-            (
-                ProjectId(record.project_id),
-                Project {
-                    name: record.project_name,
-                    starting_date: record.starting_date,
-                    daily_goal: Duration::seconds(record.daily_goal),
-                },
-            )
+        .try_fold(HashMap::new(), |mut acc, futures_result| {
+            let (project_id, project) = futures_result?;
+            acc.insert(project_id, project);
+            Ok(acc)
         })
-        .collect())
 }
 
 fn earliest_start_date(projects: &HashMap<ProjectId, Project>) -> NaiveDate {
@@ -181,17 +197,16 @@ async fn get_raw_toggl_data(
     .await;
 
     // Collect the results from the initial call into a Vec
-    let toggl_entires_from_initial_call = initial_call
+    let toggl_entires_from_initial_call: Vec<TogglEntry> = initial_call
         .data
         .into_iter()
         .map(TogglResponseData::into)
         .collect();
 
     // Fold the results from the subsequent calls into the Vec
-    subsequent_calls.into_iter().fold(
-        Ok(toggl_entires_from_initial_call),
-        |acc, subsequent_call| {
-            let mut acc = acc?;
+    subsequent_calls.into_iter().try_fold(
+        toggl_entires_from_initial_call,
+        |mut acc, subsequent_call| {
             acc.extend(
                 subsequent_call?
                     .data
@@ -343,7 +358,7 @@ fn advance_debt(
 
     // Increase the debts
     for ProjectWithDebt { project, debt } in projects_with_debts.values_mut() {
-        if *current_date >= project.starting_date {
+        if project.advance_debt_on(*current_date) {
             *debt = *debt + project.daily_goal;
         }
 
@@ -361,4 +376,18 @@ fn advance_debt(
     }
 
     total_debt
+}
+
+impl Project {
+    fn advance_debt_on(&self, date: NaiveDate) -> bool {
+        if date < self.starting_date {
+            return false;
+        }
+
+        if self.days_off.contains(&date) {
+            return false;
+        }
+
+        true
+    }
 }

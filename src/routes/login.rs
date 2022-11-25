@@ -9,7 +9,7 @@ use sqlx::PgPool;
 
 use crate::{
     errors::InternalResult,
-    session::{new_session_cookie_header, UserId},
+    session::{new_session_cookie_header, UserKey},
 };
 
 #[derive(Template)]
@@ -34,17 +34,17 @@ pub async fn post(
     Form(form): Form<LoginForm>,
 ) -> InternalResult<impl IntoResponse> {
     let user = sqlx::query!(
-        "SELECT user_id FROM users WHERE toggl_api_key = $1",
+        "SELECT user_key FROM users WHERE toggl_api_key = $1",
         form.toggl_api_key
     )
     .fetch_optional(&pool)
     .await?;
 
-    let user_id = UserId(if let Some(user) = user {
-        user.user_id
+    let user_key = UserKey(if let Some(user) = user {
+        user.user_key
     } else {
         sqlx::query!(
-            "INSERT INTO users(toggl_api_key, workspace_id, daily_max, timezone) VALUES ($1, $2, $3, $4) RETURNING user_id",
+            "INSERT INTO users(toggl_api_key, workspace_id, daily_max, timezone) VALUES ($1, $2, $3, $4) RETURNING user_key",
             form.toggl_api_key,
             form.workspace_id,
             form.daily_max,
@@ -52,11 +52,11 @@ pub async fn post(
         )
         .fetch_one(&pool)
         .await?
-        .user_id
+        .user_key
     });
 
     Ok((
-        [new_session_cookie_header(user_id, &pool).await?],
+        [new_session_cookie_header(user_key, &pool).await?],
         Redirect::to("/"),
     ))
 }

@@ -13,14 +13,14 @@ use std::env;
 
 pub static SESSION_COOKIE_NAME: &str = "session";
 
-pub struct UserId(pub i64);
+pub struct UserKey(pub i64);
 
 fn to_internal_server_error<E>(_: E) -> Response<BoxBody> {
     StatusCode::INTERNAL_SERVER_ERROR.into_response()
 }
 
 #[async_trait]
-impl<B> FromRequest<B> for UserId
+impl<B> FromRequest<B> for UserKey
 where
     B: Send,
 {
@@ -40,27 +40,30 @@ where
             .await
             .map_err(to_internal_server_error)?;
 
-        let user_id = sqlx::query!("SELECT user_id FROM session_tokens WHERE token = $1", token)
-            .fetch_optional(&pool)
-            .await
-            .map_err(to_internal_server_error)?
-            .map(|s| s.user_id)
-            .ok_or_else(|| StatusCode::BAD_REQUEST.into_response())?;
+        let user_key = sqlx::query!(
+            "SELECT user_key FROM session_tokens WHERE token = $1",
+            token,
+        )
+        .fetch_optional(&pool)
+        .await
+        .map_err(to_internal_server_error)?
+        .map(|s| s.user_key)
+        .ok_or_else(|| StatusCode::BAD_REQUEST.into_response())?;
 
-        Ok(Self(user_id))
+        Ok(Self(user_key))
     }
 }
 
 pub async fn new_session_cookie_header(
-    user_id: UserId,
+    user_key: UserKey,
     pool: &PgPool,
 ) -> InternalResult<(HeaderName, HeaderValue)> {
     let session_token = Alphanumeric.sample_string(&mut rand::thread_rng(), 64);
 
     sqlx::query!(
-        "INSERT INTO session_tokens(token, user_id) VALUES ($1, $2)",
+        "INSERT INTO session_tokens(token, user_key) VALUES ($1, $2)",
         session_token,
-        user_id.0,
+        user_key.0,
     )
     .execute(pool)
     .await?;

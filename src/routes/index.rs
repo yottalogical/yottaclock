@@ -1,6 +1,6 @@
 use crate::{
     errors::InternalResult,
-    session::UserId,
+    session::UserKey,
     toggl::{self, calculate_goals},
 };
 use askama::Template;
@@ -47,11 +47,11 @@ pub struct Index {
 }
 
 pub async fn get(
-    user_id: UserId,
+    user_key: UserKey,
     Extension(pool): Extension<PgPool>,
     Extension(client): Extension<Client>,
 ) -> InternalResult<impl IntoResponse> {
-    let (goals, total_debt) = calculate_goals(user_id, pool, client).await?;
+    let (goals, total_debt) = calculate_goals(user_key, pool, client).await?;
 
     let template = Index {
         total_debt: HumanDuration(total_debt),
