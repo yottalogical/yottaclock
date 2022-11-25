@@ -13,15 +13,24 @@ use reqwest::Client;
 use sqlx::PgPool;
 use std::fmt::{self, Display, Formatter};
 
+#[cfg(test)]
+mod tests;
+
 pub struct HumanDuration(pub Duration);
 
 impl Display for HumanDuration {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let hours = self.0.num_hours();
-        let minutes = self.0.num_minutes() - 60 * self.0.num_hours();
-        let seconds = self.0.num_seconds() - 60 * self.0.num_minutes();
+        let (absolute_duration, sign) = if self.0 > Duration::seconds(0) {
+            (self.0, "")
+        } else {
+            (-self.0, "-")
+        };
 
-        write!(f, "{}:{:0>2}:{:0>2}", hours, minutes, seconds)
+        let hours = absolute_duration.num_hours();
+        let minutes = absolute_duration.num_minutes() - 60 * absolute_duration.num_hours();
+        let seconds = absolute_duration.num_seconds() - 60 * absolute_duration.num_minutes();
+
+        write!(f, "{}{}:{:0>2}:{:0>2}", sign, hours, minutes, seconds)
     }
 }
 
