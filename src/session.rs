@@ -13,7 +13,7 @@ use std::env;
 
 pub static SESSION_COOKIE_NAME: &str = "session";
 
-pub struct UserId(pub i32);
+pub struct UserId(pub i64);
 
 fn to_internal_server_error<E>(_: E) -> Response<BoxBody> {
     StatusCode::INTERNAL_SERVER_ERROR.into_response()
@@ -34,7 +34,7 @@ where
         let token = typed_headers
             .as_ref()
             .and_then(|c| c.get(SESSION_COOKIE_NAME))
-            .ok_or(Redirect::to("/login/").into_response())?;
+            .ok_or_else(|| Redirect::to("/login/").into_response())?;
 
         let Extension(pool) = Extension::from_request(req)
             .await
@@ -45,14 +45,14 @@ where
             .await
             .map_err(to_internal_server_error)?
             .map(|s| s.user_id)
-            .ok_or(StatusCode::BAD_REQUEST.into_response())?;
+            .ok_or_else(|| StatusCode::BAD_REQUEST.into_response())?;
 
         Ok(Self(user_id))
     }
 }
 
 pub async fn new_session_cookie_header(
-    user_id: i32,
+    user_id: UserId,
     pool: &PgPool,
 ) -> InternalResult<(HeaderName, HeaderValue)> {
     let session_token = Alphanumeric.sample_string(&mut rand::thread_rng(), 64);
@@ -60,12 +60,12 @@ pub async fn new_session_cookie_header(
     sqlx::query!(
         "INSERT INTO session_tokens(token, user_id) VALUES ($1, $2)",
         session_token,
-        user_id
+        user_id.0,
     )
     .execute(pool)
     .await?;
 
-    let secure = if let Some(_) = env::var_os("YOTTACLOCK_INSECURE_COOKIES") {
+    let secure = if env::var_os("YOTTACLOCK_INSECURE_COOKIES").is_some() {
         ""
     } else {
         "Secure; "

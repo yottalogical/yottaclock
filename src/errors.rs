@@ -5,28 +5,24 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use chrono_tz::Tz;
-use tokio::task::JoinError;
 use tracing::error;
 
 #[derive(thiserror::Error, Debug)]
 pub enum InternalError {
     #[error("Fatal sqlx error: {0}")]
-    FatalSqlxError(#[from] sqlx::Error),
+    Sqlx(#[from] sqlx::Error),
 
     #[error("Fatal askama error: {0}")]
-    FatalAskamaError(#[from] askama::Error),
+    Askama(#[from] askama::Error),
 
     #[error("Fatal reqwest error: {0}")]
-    FatalReqwestError(#[from] reqwest::Error),
-
-    #[error("Fatal JoinError: {0}")]
-    FatalJoinError(#[from] JoinError),
+    Reqwest(#[from] reqwest::Error),
 
     #[error("Fatal InvalidHeaderValue error: {0}")]
-    FatalInvalidHeaderValueError(#[from] InvalidHeaderValue),
+    InvalidHeaderValue(#[from] InvalidHeaderValue),
 
     #[error("Fatal UnrecognizedTimezone error: {0}")]
-    FatalUnrecognizedTimezoneError(<Tz as FromStr>::Err),
+    UnrecognizedTimezone(<Tz as FromStr>::Err),
 }
 
 pub type InternalResult<T, E = InternalError> = Result<T, E>;

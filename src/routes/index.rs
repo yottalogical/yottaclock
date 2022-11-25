@@ -47,7 +47,7 @@ pub struct Index {
 }
 
 pub async fn get(
-    UserId(user_id): UserId,
+    user_id: UserId,
     Extension(pool): Extension<PgPool>,
     Extension(client): Extension<Client>,
 ) -> InternalResult<impl IntoResponse> {

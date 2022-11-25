@@ -1,4 +1,3 @@
-use crate::{errors::InternalResult, session::new_session_cookie_header};
 use askama::Template;
 use axum::{
     extract::Form,
@@ -7,6 +6,11 @@ use axum::{
 };
 use serde::Deserialize;
 use sqlx::PgPool;
+
+use crate::{
+    errors::InternalResult,
+    session::{new_session_cookie_header, UserId},
+};
 
 #[derive(Template)]
 #[template(path = "login.html")]
@@ -20,7 +24,7 @@ pub async fn get() -> InternalResult<impl IntoResponse> {
 #[derive(Deserialize)]
 pub struct LoginForm {
     toggl_api_key: String,
-    workspace_id: String,
+    workspace_id: i64,
     daily_max: i64,
     timezone: String,
 }
@@ -36,7 +40,7 @@ pub async fn post(
     .fetch_optional(&pool)
     .await?;
 
-    let user_id: i32 = if let Some(user) = user {
+    let user_id = UserId(if let Some(user) = user {
         user.user_id
     } else {
         sqlx::query!(
@@ -49,7 +53,7 @@ pub async fn post(
         .fetch_one(&pool)
         .await?
         .user_id
-    };
+    });
 
     Ok((
         [new_session_cookie_header(user_id, &pool).await?],

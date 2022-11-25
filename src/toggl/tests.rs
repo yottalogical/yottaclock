@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn test_total_debt_overflow() {
-    let project_id = 1234;
+    let project_id = ProjectId(1234);
 
     let toggl_entries = vec![TogglEntry {
         project_id,
@@ -27,7 +27,7 @@ fn test_total_debt_overflow() {
     assert_eq!(
         r1,
         HashMap::from([(
-            1234,
+            project_id,
             ProjectWithDebt {
                 project: example_project,
                 debt: Duration::hours(6),

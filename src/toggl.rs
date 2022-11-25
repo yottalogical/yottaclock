@@ -11,7 +11,10 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use tracing::{trace, warn};
 
-use crate::errors::{InternalError, InternalResult};
+use crate::{
+    errors::{InternalError, InternalResult},
+    session::UserId,
+};
 
 #[cfg(test)]
 mod tests;
@@ -24,7 +27,7 @@ pub struct Goal {
 #[derive(Serialize)]
 struct TogglQuery<'a> {
     user_agent: &'a str,
-    workspace_id: &'a str,
+    workspace_id: i64,
     since: &'a NaiveDate,
     page: usize,
 }
@@ -38,14 +41,20 @@ struct TogglResponse {
 
 #[derive(Debug, Deserialize)]
 struct TogglResponseData {
-    pid: i32,
+    pid: i64,
     start: DateTime<FixedOffset>,
     dur: i64,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct ProjectId(i64);
+
+#[derive(Clone, Copy)]
+struct WorkspaceId(i64);
+
 #[derive(Debug)]
 struct TogglEntry {
-    project_id: i32,
+    project_id: ProjectId,
     date: NaiveDate,
     duration: Duration,
 }
@@ -53,7 +62,7 @@ struct TogglEntry {
 impl From<TogglResponseData> for TogglEntry {
     fn from(response_data: TogglResponseData) -> Self {
         Self {
-            project_id: response_data.pid,
+            project_id: ProjectId(response_data.pid),
             date: response_data.start.date_naive(),
             duration: Duration::milliseconds(response_data.dur),
         }
@@ -74,13 +83,13 @@ struct ProjectWithDebt {
 }
 
 pub async fn calculate_goals(
-    user_id: i32,
+    user_id: UserId,
     pool: PgPool,
     client: Client,
 ) -> InternalResult<(Vec<Goal>, Duration)> {
     let record = sqlx::query!(
         "SELECT toggl_api_key, workspace_id, daily_max, timezone FROM users WHERE user_id = $1",
-        user_id
+        user_id.0,
     )
     .fetch_one(&pool)
     .await?;
@@ -90,7 +99,7 @@ pub async fn calculate_goals(
     let earliest_start = earliest_start_date(&projects);
 
     let toggl_entries = get_raw_toggl_data(
-        &record.workspace_id,
+        WorkspaceId(record.workspace_id),
         &record.toggl_api_key,
         &earliest_start,
         &client,
@@ -116,10 +125,13 @@ pub async fn calculate_goals(
     Ok((goals, total_debt))
 }
 
-async fn get_user_projects(user_id: i32, pool: &PgPool) -> InternalResult<HashMap<i32, Project>> {
+async fn get_user_projects(
+    user_id: UserId,
+    pool: &PgPool,
+) -> InternalResult<HashMap<ProjectId, Project>> {
     let query = sqlx::query!(
         "SELECT project_id, project_name, starting_date, daily_goal FROM projects WHERE user_id = $1",
-        user_id,
+        user_id.0,
     );
 
     Ok(query
@@ -128,7 +140,7 @@ async fn get_user_projects(user_id: i32, pool: &PgPool) -> InternalResult<HashMa
         .into_iter()
         .map(|record| {
             (
-                record.project_id,
+                ProjectId(record.project_id),
                 Project {
                     name: record.project_name,
                     starting_date: record.starting_date,
@@ -139,7 +151,7 @@ async fn get_user_projects(user_id: i32, pool: &PgPool) -> InternalResult<HashMa
         .collect())
 }
 
-fn earliest_start_date(projects: &HashMap<i32, Project>) -> NaiveDate {
+fn earliest_start_date(projects: &HashMap<ProjectId, Project>) -> NaiveDate {
     let mut earliest = NaiveDate::MAX;
 
     for project in projects.values() {
@@ -152,13 +164,13 @@ fn earliest_start_date(projects: &HashMap<i32, Project>) -> NaiveDate {
 }
 
 async fn get_raw_toggl_data(
-    workspace_id: &str,
+    workspace_id: WorkspaceId,
     api_token: &str,
     since: &NaiveDate,
     client: &Client,
 ) -> InternalResult<Vec<TogglEntry>> {
     // Make one call to the API to determine the total number of pages
-    let initial_call = call_toggl_api(workspace_id, api_token, since, &client, 1).await?;
+    let initial_call = call_toggl_api(workspace_id, api_token, since, client, 1).await?;
 
     let num_pages = initial_call.total_count / initial_call.per_page + 1;
 
@@ -192,7 +204,7 @@ async fn get_raw_toggl_data(
 }
 
 async fn call_toggl_api(
-    workspace_id: &str,
+    workspace_id: WorkspaceId,
     api_token: &str,
     since: &NaiveDate,
     client: &Client,
@@ -200,7 +212,7 @@ async fn call_toggl_api(
 ) -> InternalResult<TogglResponse> {
     trace!(
         "Calling Toggl API (workspace {}, page {})",
-        workspace_id,
+        workspace_id.0,
         page,
     );
 
@@ -209,7 +221,7 @@ async fn call_toggl_api(
             .get("https://api.track.toggl.com/reports/api/v2/details")
             .query(&TogglQuery {
                 user_agent: "yottaclock",
-                workspace_id,
+                workspace_id: workspace_id.0,
                 since,
                 page,
             })
@@ -220,14 +232,14 @@ async fn call_toggl_api(
         if response.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
             warn!(
                 "Got 429 response from Toggl API (workspace {}, page {})",
-                workspace_id, page,
+                workspace_id.0, page,
             );
 
             tokio::time::sleep(std::time::Duration::from_secs(1)).await;
         } else {
             trace!(
                 "Got response from Toggl API (workspace {}, page {})",
-                workspace_id,
+                workspace_id.0,
                 page,
             );
 
@@ -239,17 +251,17 @@ async fn call_toggl_api(
 fn today_in_timezone(timezone: &str) -> InternalResult<NaiveDate> {
     let tz: Tz = timezone
         .parse()
-        .map_err(|err| InternalError::FatalUnrecognizedTimezoneError(err))?;
+        .map_err(InternalError::UnrecognizedTimezone)?;
 
     Ok(Utc::now().with_timezone(&tz).date_naive())
 }
 
 fn process_toggl_data(
     toggl_entries: Vec<TogglEntry>,
-    user_projects: HashMap<i32, Project>,
+    projects: HashMap<ProjectId, Project>,
     daily_max: Duration,
     today: NaiveDate,
-) -> (HashMap<i32, ProjectWithDebt>, Duration) {
+) -> (HashMap<ProjectId, ProjectWithDebt>, Duration) {
     // Sort the entries by their date
     let sorted_toggl_entries = {
         let mut v = toggl_entries;
@@ -257,9 +269,9 @@ fn process_toggl_data(
         v
     };
 
-    let mut current_date = earliest_start_date(&user_projects) - Days::new(1);
+    let mut current_date = earliest_start_date(&projects) - Days::new(1);
 
-    let mut projects_with_debts: HashMap<i32, ProjectWithDebt> = user_projects
+    let mut projects_with_debts: HashMap<ProjectId, ProjectWithDebt> = projects
         .into_iter()
         .map(|(project_id, project)| {
             (
@@ -319,7 +331,7 @@ fn process_toggl_data(
 }
 
 fn advance_debt(
-    projects_with_debts: &mut HashMap<i32, ProjectWithDebt>,
+    projects_with_debts: &mut HashMap<ProjectId, ProjectWithDebt>,
     current_date: &mut NaiveDate,
     previous_total_debt: Duration,
     daily_max: Duration,
