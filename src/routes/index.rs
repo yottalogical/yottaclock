@@ -6,7 +6,7 @@ use crate::{
 use askama::Template;
 use axum::{
     extract::Extension,
-    response::{Html, IntoResponse},
+    response::{Html, IntoResponse, Redirect},
 };
 use chrono::Duration;
 use reqwest::Client;
@@ -60,12 +60,16 @@ pub async fn get(
     Extension(pool): Extension<PgPool>,
     Extension(client): Extension<Client>,
 ) -> InternalResult<impl IntoResponse> {
-    let (goals, total_debt) = calculate_goals(user_key, pool, client).await?;
+    Ok(
+        if let Some((goals, total_debt)) = calculate_goals(user_key, pool, client).await? {
+            let template = Index {
+                total_debt: HumanDuration(total_debt),
+                goals: goals.into_iter().map(|g| g.into()).collect(),
+            };
 
-    let template = Index {
-        total_debt: HumanDuration(total_debt),
-        goals: goals.into_iter().map(|g| g.into()).collect(),
-    };
-
-    Ok(Html(template.render()?))
+            Html(template.render()?).into_response()
+        } else {
+            Redirect::to("/newproject/").into_response()
+        },
+    )
 }

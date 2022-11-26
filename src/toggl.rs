@@ -161,7 +161,7 @@ pub async fn calculate_goals(
     user_key: UserKey,
     pool: PgPool,
     client: Client,
-) -> InternalResult<(Vec<Goal>, Duration)> {
+) -> InternalResult<Option<(Vec<Goal>, Duration)>> {
     let record = sqlx::query!(
         "SELECT toggl_api_key, workspace_id, daily_max, timezone
         FROM users
@@ -173,33 +173,37 @@ pub async fn calculate_goals(
 
     let projects = get_user_projects(user_key, &pool).await?;
 
-    let earliest_start = earliest_start_date(&projects);
+    Ok(if !projects.is_empty() {
+        let earliest_start = earliest_start_date(&projects);
 
-    let toggl_entries = get_raw_toggl_data(
-        WorkspaceId(record.workspace_id),
-        &record.toggl_api_key,
-        &earliest_start,
-        &client,
-    )
-    .await?;
+        let toggl_entries = get_raw_toggl_data(
+            WorkspaceId(record.workspace_id),
+            &record.toggl_api_key,
+            &earliest_start,
+            &client,
+        )
+        .await?;
 
-    let (project_debts, total_debt) = process_toggl_data(
-        toggl_entries,
-        projects,
-        Duration::seconds(record.daily_max),
-        today_in_timezone(&record.timezone)?,
-    );
+        let (project_debts, total_debt) = process_toggl_data(
+            toggl_entries,
+            projects,
+            Duration::seconds(record.daily_max),
+            today_in_timezone(&record.timezone)?,
+        );
 
-    let mut goals: Vec<Goal> = project_debts
-        .into_iter()
-        .map(|(_, ProjectWithDebt { project, debt })| Goal {
-            name: project.name,
-            time: debt,
-        })
-        .collect();
-    goals.sort_by(|lhs, rhs| lhs.name.cmp(&rhs.name));
+        let mut goals: Vec<Goal> = project_debts
+            .into_iter()
+            .map(|(_, ProjectWithDebt { project, debt })| Goal {
+                name: project.name,
+                time: debt,
+            })
+            .collect();
+        goals.sort_by(|lhs, rhs| lhs.name.cmp(&rhs.name));
 
-    Ok((goals, total_debt))
+        Some((goals, total_debt))
+    } else {
+        None
+    })
 }
 
 async fn get_user_projects(

@@ -5,7 +5,8 @@ use axum::{
 
 mod index;
 mod login;
-pub mod signup;
+mod newproject;
+mod signup;
 
 pub fn router() -> Router {
     Router::new()
@@ -13,4 +14,5 @@ pub fn router() -> Router {
         .route("/login/", get(login::get))
         .route("/login/", post(login::post))
         .route("/signup/", post(signup::post))
+        .route("/newproject/", get(newproject::get))
 }
