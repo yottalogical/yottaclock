@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 
-{% block title %}Yottaclock Login{% endblock %}
+{% block title %}Yottaclock Signup{% endblock %}
 
 {% block body %}
-<h1>Login</h1>
+<h1>Signup</h1>
 <form method="post">
     <label for="toggl_api_key">Toggl API Token:</label>
     <input type="text" name="toggl_api_key" />
@@ -11,8 +11,4 @@
 
     <input type="submit" />
 </form>
-
-{% if unrecognized_api_token %}
-<p>API token not recognized.</p>
-{% endif %}
 {% endblock %}

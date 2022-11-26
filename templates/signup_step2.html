@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Yottaclock Signup{% endblock %}
+
+{% block body %}
+<h1>Signup</h1>
+<form method="post" action="/signup/step2">
+    <input type="hidden" name="toggl_api_key" value="{{ toggl_api_key }}" />
+
+    <label for="workspace_id">Workspace:</label>
+    <select type="text" name="workspace_id">
+        {% for workspace in workspaces %}
+        <option value="{{ workspace.id }}">{{ workspace.name }}</option>
+        {% endfor %}
+    </select>
+    <br />
+
+    <label for="daily_max_hours">Daily Limit:</label>
+    <input type="text" name="daily_max_hours" placeholder="hours" />
+    <input type="text" name="daily_max_minutes" placeholder="minutes" />
+    <input type="text" name="daily_max_seconds" placeholder="seconds" />
+    <br />
+
+    <label for="toggl_api_key">Timezone:</label>
+    <select type="text" name="timezone">
+        {% for timezone in timezones %}
+        <option>{{ timezone }}</option>
+        {% endfor %}
+    </select>
+    <br />
+
+    <input type="submit" />
+</form>
+{% endblock %}

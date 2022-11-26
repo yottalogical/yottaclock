@@ -1,6 +1,7 @@
 use std::{
     cmp::{max, min},
     collections::{HashMap, HashSet},
+    fmt::{self, Display, Formatter},
 };
 
 use chrono::{DateTime, Datelike, Days, Duration, FixedOffset, NaiveDate, Utc, Weekday};
@@ -49,8 +50,21 @@ struct TogglResponseData {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct ProjectId(i64);
 
-#[derive(Clone, Copy)]
-struct WorkspaceId(i64);
+#[derive(Deserialize)]
+pub struct Workspace {
+    pub id: WorkspaceId,
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct WorkspaceId(pub i64);
+
+impl Display for WorkspaceId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
 
 #[derive(Debug)]
 struct TogglEntry {
@@ -93,6 +107,29 @@ struct Project {
 struct ProjectWithDebt {
     project: Project,
     debt: Duration,
+}
+
+pub async fn get_workspaces(
+    toggl_api_token: &str,
+    client: Client,
+) -> InternalResult<Vec<Workspace>> {
+    let response = client
+        .get("https://api.track.toggl.com/api/v9/workspaces")
+        .basic_auth(toggl_api_token, Some("api_token"))
+        .send()
+        .await?
+        .text()
+        .await?;
+
+    println!("{}", response);
+
+    Ok(client
+        .get("https://api.track.toggl.com/api/v9/workspaces")
+        .basic_auth(toggl_api_token, Some("api_token"))
+        .send()
+        .await?
+        .json()
+        .await?)
 }
 
 pub async fn calculate_goals(

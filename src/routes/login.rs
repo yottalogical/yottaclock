@@ -14,19 +14,21 @@ use crate::{
 
 #[derive(Template)]
 #[template(path = "login.html")]
-pub struct LoginTemplate {}
+pub struct LoginTemplate {
+    unrecognized_api_token: bool,
+}
 
 pub async fn get() -> InternalResult<impl IntoResponse> {
-    let template = LoginTemplate {};
+    let template = LoginTemplate {
+        unrecognized_api_token: false,
+    };
+
     Ok(Html(template.render()?))
 }
 
 #[derive(Deserialize)]
 pub struct LoginForm {
     toggl_api_key: String,
-    workspace_id: i64,
-    daily_max: i64,
-    timezone: String,
 }
 
 pub async fn post(
@@ -34,29 +36,25 @@ pub async fn post(
     Form(form): Form<LoginForm>,
 ) -> InternalResult<impl IntoResponse> {
     let user = sqlx::query!(
-        "SELECT user_key FROM users WHERE toggl_api_key = $1",
+        "SELECT user_key
+        FROM users
+        WHERE toggl_api_key = $1",
         form.toggl_api_key
     )
     .fetch_optional(&pool)
     .await?;
 
-    let user_key = UserKey(if let Some(user) = user {
-        user.user_key
-    } else {
-        sqlx::query!(
-            "INSERT INTO users(toggl_api_key, workspace_id, daily_max, timezone) VALUES ($1, $2, $3, $4) RETURNING user_key",
-            form.toggl_api_key,
-            form.workspace_id,
-            form.daily_max,
-            form.timezone,
+    Ok(if let Some(user) = user {
+        (
+            [new_session_cookie_header(UserKey(user.user_key), &pool).await?],
+            Redirect::to("/"),
         )
-        .fetch_one(&pool)
-        .await?
-        .user_key
-    });
+            .into_response()
+    } else {
+        let template = LoginTemplate {
+            unrecognized_api_token: true,
+        };
 
-    Ok((
-        [new_session_cookie_header(user_key, &pool).await?],
-        Redirect::to("/"),
-    ))
+        Html(template.render()?).into_response()
+    })
 }

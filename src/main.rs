@@ -1,10 +1,6 @@
 #![forbid(unsafe_code)]
 
-use axum::{
-    extract::Extension,
-    routing::{get, post},
-    Router,
-};
+use axum::extract::Extension;
 use dotenvy::dotenv;
 use reqwest::Client;
 use sqlx::postgres::PgPoolOptions;
@@ -37,10 +33,7 @@ async fn main() {
 
     let client = Client::new();
 
-    let app = Router::new()
-        .route("/", get(routes::index::get))
-        .route("/login/", get(routes::login::get))
-        .route("/login/", post(routes::login::post))
+    let app = routes::router()
         .layer(TraceLayer::new_for_http())
         .layer(Extension(pool))
         .layer(Extension(client));
