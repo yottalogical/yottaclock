@@ -12,7 +12,5 @@ pub fn router() -> Router {
         .route("/", get(index::get))
         .route("/login/", get(login::get))
         .route("/login/", post(login::post))
-        .route("/signup/", get(signup::get))
-        .route("/signup/", post(signup::post_step1))
-        .route("/signup/step2", post(signup::post_step2))
+        .route("/signup/", post(signup::post))
 }

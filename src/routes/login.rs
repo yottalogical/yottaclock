@@ -1,16 +1,22 @@
 use askama::Template;
 use axum::{
     extract::Form,
+    http::StatusCode,
     response::{Html, IntoResponse, Redirect},
     Extension,
 };
+use chrono_tz::TZ_VARIANTS;
+use reqwest::Client;
 use serde::Deserialize;
 use sqlx::PgPool;
 
 use crate::{
     errors::InternalResult,
     session::{new_session_cookie_header, UserKey},
+    toggl::get_workspaces,
 };
+
+use super::signup::SignupTemplate;
 
 #[derive(Template)]
 #[template(path = "login.html")]
@@ -33,6 +39,7 @@ pub struct LoginForm {
 
 pub async fn post(
     Extension(pool): Extension<PgPool>,
+    Extension(client): Extension<Client>,
     Form(form): Form<LoginForm>,
 ) -> InternalResult<impl IntoResponse> {
     let user = sqlx::query!(
@@ -45,16 +52,32 @@ pub async fn post(
     .await?;
 
     Ok(if let Some(user) = user {
+        // User already exists: Log them in
+
         (
             [new_session_cookie_header(UserKey(user.user_key), &pool).await?],
             Redirect::to("/"),
         )
             .into_response()
     } else {
-        let template = LoginTemplate {
-            unrecognized_api_token: true,
-        };
+        if let Some(workspaces) = get_workspaces(&form.toggl_api_key, client).await? {
+            // User doesn't exist, but the API token works: Sign them up
 
-        Html(template.render()?).into_response()
+            let template = SignupTemplate {
+                toggl_api_key: &form.toggl_api_key,
+                workspaces: &workspaces,
+                timezones: &TZ_VARIANTS,
+            };
+
+            Html(template.render()?).into_response()
+        } else {
+            // User doesn't exist and the API token works: Respond with an error message
+
+            let template = LoginTemplate {
+                unrecognized_api_token: true,
+            };
+
+            (StatusCode::BAD_REQUEST, Html(template.render()?)).into_response()
+        }
     })
 }

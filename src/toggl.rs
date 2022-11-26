@@ -7,7 +7,7 @@ use std::{
 use chrono::{DateTime, Datelike, Days, Duration, FixedOffset, NaiveDate, Utc, Weekday};
 use chrono_tz::Tz;
 use futures::future;
-use reqwest::Client;
+use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use tracing::{trace, warn};
@@ -112,24 +112,22 @@ struct ProjectWithDebt {
 pub async fn get_workspaces(
     toggl_api_token: &str,
     client: Client,
-) -> InternalResult<Vec<Workspace>> {
-    let response = client
-        .get("https://api.track.toggl.com/api/v9/workspaces")
-        .basic_auth(toggl_api_token, Some("api_token"))
-        .send()
-        .await?
-        .text()
-        .await?;
+) -> InternalResult<Option<Vec<Workspace>>> {
+    loop {
+        let response = client
+            .get("https://api.track.toggl.com/api/v9/workspaces")
+            .basic_auth(toggl_api_token, Some("api_token"))
+            .send()
+            .await?;
 
-    println!("{}", response);
-
-    Ok(client
-        .get("https://api.track.toggl.com/api/v9/workspaces")
-        .basic_auth(toggl_api_token, Some("api_token"))
-        .send()
-        .await?
-        .json()
-        .await?)
+        match response.status() {
+            StatusCode::TOO_MANY_REQUESTS => {
+                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+            }
+            StatusCode::OK => break Ok(response.json().await?),
+            _ => break Ok(None),
+        }
+    }
 }
 
 pub async fn calculate_goals(

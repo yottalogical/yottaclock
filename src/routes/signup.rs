@@ -1,60 +1,30 @@
 use askama::Template;
 use axum::{
     extract::Form,
-    response::{Html, IntoResponse, Redirect},
+    response::{IntoResponse, Redirect},
     Extension,
 };
 use chrono::Duration;
-use chrono_tz::{Tz, TZ_VARIANTS};
-use reqwest::Client;
+use chrono_tz::Tz;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
 use crate::{
     errors::InternalResult,
     session::{new_session_cookie_header, UserKey},
-    toggl::{get_workspaces, Workspace, WorkspaceId},
+    toggl::{Workspace, WorkspaceId},
 };
 
 #[derive(Template)]
-#[template(path = "signup_step1.html")]
-pub struct SignupTemplateStep1 {}
-
-pub async fn get() -> InternalResult<impl IntoResponse> {
-    let template = SignupTemplateStep1 {};
-    Ok(Html(template.render()?))
+#[template(path = "signup.html")]
+pub struct SignupTemplate<'a> {
+    pub toggl_api_key: &'a str,
+    pub workspaces: &'a [Workspace],
+    pub timezones: &'a [Tz],
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct SignupFormStep1 {
-    toggl_api_key: String,
-}
-
-#[derive(Template)]
-#[template(path = "signup_step2.html")]
-pub struct SignupTemplateStep2<'a> {
-    toggl_api_key: &'a str,
-    workspaces: &'a [Workspace],
-    timezones: &'a [Tz],
-}
-
-pub async fn post_step1(
-    Extension(client): Extension<Client>,
-    Form(form): Form<SignupFormStep1>,
-) -> InternalResult<impl IntoResponse> {
-    let workspaces = get_workspaces(&form.toggl_api_key, client).await?;
-
-    let template = SignupTemplateStep2 {
-        toggl_api_key: &form.toggl_api_key,
-        workspaces: &workspaces,
-        timezones: &TZ_VARIANTS,
-    };
-
-    Ok(Html(template.render()?).into_response())
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SignupFormStep2 {
+pub struct SignupForm {
     toggl_api_key: String,
     workspace_id: WorkspaceId,
     daily_max_hours: i64,
@@ -63,9 +33,9 @@ pub struct SignupFormStep2 {
     timezone: String,
 }
 
-pub async fn post_step2(
+pub async fn post(
     Extension(pool): Extension<PgPool>,
-    Form(form): Form<SignupFormStep2>,
+    Form(form): Form<SignupForm>,
 ) -> InternalResult<impl IntoResponse> {
     let daily_max = Duration::hours(form.daily_max_hours)
         + Duration::minutes(form.daily_max_minutes)
