@@ -10,7 +10,6 @@ CREATE TABLE users (
 CREATE TABLE projects (
     project_key BIGSERIAL PRIMARY KEY,
     user_key BIGINT NOT NULL REFERENCES users(user_key) ON DELETE CASCADE,
-    project_name TEXT NOT NULL,
     project_id BIGINT NOT NULL,
     starting_date DATE NOT NULL,
     daily_goal BIGINT NOT NULL,

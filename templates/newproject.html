@@ -4,4 +4,53 @@
 
 {% block body %}
 <h1>New Project</h1>
+<form method="post">
+    <label for="project_id">Toggl Project:</label>
+    <select required name="project_id">
+        {% for project in projects %}
+        <option value="{{ project.id }}">{{ project.name }}</option>
+        {% endfor %}
+    </select>
+    <br />
+
+    <label for="starting_date">Starting Date:</label>
+    <input type="date" required name="starting_date" />
+    <br />
+
+    <label for="daily_goal_hours">Daily Goal:</label>
+    <input type="number" min="0" step="1" required name="daily_goal_hours" placeholder="hours" />
+    <input type="number" min="0" step="1" required name="daily_goal_minutes" placeholder="minutes" />
+    <input type="number" min="0" step="1" required name="daily_goal_seconds" placeholder="seconds" />
+    <br />
+
+    <label for="monday">Monday:</label>
+    <input type="checkbox" checked name="monday" />
+    <br />
+
+    <label for="tuesday">Tuesday:</label>
+    <input type="checkbox" checked name="tuesday" />
+    <br />
+
+    <label for="wednesday">Wednesday:</label>
+    <input type="checkbox" checked name="wednesday" />
+    <br />
+
+    <label for="thursday">Thursday:</label>
+    <input type="checkbox" checked name="thursday" />
+    <br />
+
+    <label for="friday">Friday:</label>
+    <input type="checkbox" checked name="friday" />
+    <br />
+
+    <label for="saturday">Saturday:</label>
+    <input type="checkbox" checked name="saturday" />
+    <br />
+
+    <label for="sunday">Sunday:</label>
+    <input type="checkbox" checked name="sunday" />
+    <br />
+
+    <input type="submit" />
+</form>
 {% endblock %}

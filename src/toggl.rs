@@ -47,8 +47,15 @@ struct TogglResponseData {
     dur: i64,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct ProjectId(i64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct ProjectId(pub i64);
+
+impl Display for ProjectId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
 
 #[derive(Deserialize)]
 pub struct Workspace {
@@ -109,6 +116,13 @@ struct ProjectWithDebt {
     debt: Duration,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct TogglProject {
+    active: bool,
+    pub name: String,
+    pub id: ProjectId,
+}
+
 pub async fn get_workspaces(
     toggl_api_token: &str,
     client: Client,
@@ -157,6 +171,36 @@ pub async fn get_workspace_details(
     }
 }
 
+pub async fn get_toggl_projects(
+    toggl_api_token: &str,
+    workspace_id: WorkspaceId,
+    client: &Client,
+) -> InternalResult<Vec<TogglProject>> {
+    let url = format!(
+        "https://api.track.toggl.com/api/v9/workspaces/{}/projects",
+        workspace_id,
+    );
+
+    loop {
+        let response = client
+            .get(&url)
+            .basic_auth(toggl_api_token, Some("api_token"))
+            .send()
+            .await?;
+
+        if let StatusCode::TOO_MANY_REQUESTS = response.status() {
+            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+        } else {
+            let all_projects: Vec<TogglProject> = response.json().await?;
+
+            break Ok(all_projects
+                .into_iter()
+                .filter(|project| project.active)
+                .collect());
+        }
+    }
+}
+
 pub async fn calculate_goals(
     user_key: UserKey,
     pool: PgPool,
@@ -171,7 +215,14 @@ pub async fn calculate_goals(
     .fetch_one(&pool)
     .await?;
 
-    let projects = get_user_projects(user_key, &pool).await?;
+    let projects = get_user_projects(
+        &record.toggl_api_key,
+        WorkspaceId(record.workspace_id),
+        &client,
+        user_key,
+        &pool,
+    )
+    .await?;
 
     Ok(if !projects.is_empty() {
         let earliest_start = earliest_start_date(&projects);
@@ -207,52 +258,66 @@ pub async fn calculate_goals(
 }
 
 async fn get_user_projects(
+    toggl_api_token: &str,
+    workspace_id: WorkspaceId,
+    client: &Client,
     user_key: UserKey,
     pool: &PgPool,
 ) -> InternalResult<HashMap<ProjectId, Project>> {
-    let records = sqlx::query!(
-        "SELECT project_key, project_id, project_name, starting_date, daily_goal,
+    let records_future = sqlx::query!(
+        "SELECT project_key, project_id, starting_date, daily_goal,
             monday, tuesday, wednesday, thursday, friday, saturday, sunday
         FROM projects
         WHERE user_key = $1",
         user_key.0,
     )
-    .fetch_all(pool)
-    .await?;
+    .fetch_all(pool);
+    let toggl_projects_future = get_toggl_projects(toggl_api_token, workspace_id, client);
+    let (records, toggl_projects) = future::join(records_future, toggl_projects_future).await;
 
-    let futures = records.into_iter().map(|record| async move {
-        let days_off = sqlx::query!(
-            "SELECT days_off.day_off
-            FROM days_off
-            INNER JOIN days_off_to_projects
-            ON days_off.day_off_key = days_off_to_projects.day_off_key
-            WHERE days_off_to_projects.project_key = $1",
-            user_key.0,
-        )
-        .fetch_all(pool)
-        .await?;
+    let project_id_to_name: HashMap<ProjectId, String> = toggl_projects?
+        .into_iter()
+        .map(|project| (project.id, project.name))
+        .collect();
 
-        let weekdays = WhichWeekdays {
-            monday: record.monday,
-            tuesday: record.tuesday,
-            wednesday: record.wednesday,
-            thursday: record.thursday,
-            friday: record.friday,
-            saturday: record.saturday,
-            sunday: record.sunday,
-        };
+    let mut futures = Vec::new();
+    for record in records? {
+        if let Some(project_name) = project_id_to_name.get(&ProjectId(record.project_id)) {
+            futures.push(async move {
+                let days_off = sqlx::query!(
+                    "SELECT days_off.day_off
+                    FROM days_off
+                    INNER JOIN days_off_to_projects
+                    ON days_off.day_off_key = days_off_to_projects.day_off_key
+                    WHERE days_off_to_projects.project_key = $1",
+                    user_key.0,
+                )
+                .fetch_all(pool)
+                .await?;
 
-        Ok((
-            ProjectId(record.project_id),
-            Project {
-                name: record.project_name,
-                starting_date: record.starting_date,
-                daily_goal: Duration::seconds(record.daily_goal),
-                days_off: days_off.into_iter().map(|record| record.day_off).collect(),
-                weekdays,
-            },
-        ))
-    });
+                let weekdays = WhichWeekdays {
+                    monday: record.monday,
+                    tuesday: record.tuesday,
+                    wednesday: record.wednesday,
+                    thursday: record.thursday,
+                    friday: record.friday,
+                    saturday: record.saturday,
+                    sunday: record.sunday,
+                };
+
+                Ok((
+                    ProjectId(record.project_id),
+                    Project {
+                        name: project_name.clone(),
+                        starting_date: record.starting_date,
+                        daily_goal: Duration::seconds(record.daily_goal),
+                        days_off: days_off.into_iter().map(|record| record.day_off).collect(),
+                        weekdays,
+                    },
+                ))
+            });
+        }
+    }
 
     let future_results: Vec<InternalResult<(ProjectId, Project)>> = future::join_all(futures).await;
 
