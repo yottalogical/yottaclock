@@ -53,31 +53,26 @@ pub async fn post(
 
     Ok(if let Some(user) = user {
         // User already exists: Log them in
-
         (
             [new_session_cookie_header(UserKey(user.user_key), &pool).await?],
             Redirect::to("/"),
         )
             .into_response()
+    } else if let Some(workspaces) = get_workspaces(&form.toggl_api_key, client).await? {
+        // User doesn't exist, but the API token works: Sign them up
+        let template = SignupTemplate {
+            toggl_api_key: &form.toggl_api_key,
+            workspaces: &workspaces,
+            timezones: &TZ_VARIANTS,
+        };
+
+        Html(template.render()?).into_response()
     } else {
-        if let Some(workspaces) = get_workspaces(&form.toggl_api_key, client).await? {
-            // User doesn't exist, but the API token works: Sign them up
+        // User doesn't exist and the API token works: Respond with an error message
+        let template = LoginTemplate {
+            unrecognized_api_token: true,
+        };
 
-            let template = SignupTemplate {
-                toggl_api_key: &form.toggl_api_key,
-                workspaces: &workspaces,
-                timezones: &TZ_VARIANTS,
-            };
-
-            Html(template.render()?).into_response()
-        } else {
-            // User doesn't exist and the API token works: Respond with an error message
-
-            let template = LoginTemplate {
-                unrecognized_api_token: true,
-            };
-
-            (StatusCode::BAD_REQUEST, Html(template.render()?)).into_response()
-        }
+        (StatusCode::BAD_REQUEST, Html(template.render()?)).into_response()
     })
 }

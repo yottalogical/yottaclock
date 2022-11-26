@@ -130,6 +130,33 @@ pub async fn get_workspaces(
     }
 }
 
+pub async fn get_workspace_details(
+    toggl_api_token: &str,
+    workspace_id: WorkspaceId,
+    client: Client,
+) -> InternalResult<Option<Workspace>> {
+    let url = format!(
+        "https://api.track.toggl.com/api/v9/workspaces/{}",
+        workspace_id,
+    );
+
+    loop {
+        let response = client
+            .get(&url)
+            .basic_auth(toggl_api_token, Some("api_token"))
+            .send()
+            .await?;
+
+        match response.status() {
+            StatusCode::TOO_MANY_REQUESTS => {
+                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+            }
+            StatusCode::OK => break Ok(response.json().await?),
+            _ => break Ok(None),
+        }
+    }
+}
+
 pub async fn calculate_goals(
     user_key: UserKey,
     pool: PgPool,
