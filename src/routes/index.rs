@@ -48,7 +48,7 @@ pub async fn get(
 
             Html(template.render()?).into_response()
         } else {
-            Redirect::to("/newproject/").into_response()
+            Redirect::to("/project/new/").into_response()
         },
     )
 }
