@@ -6,7 +6,15 @@
 </head>
 
 <body>
-    {% block body %}{% endblock %}
+    <div>
+        <b><a href="/">Home</a></b>
+        <a href="/account/">Account</a>
+        <a href="/projects/">Projects</a>
+        <a href="/daysoff/">Days Off</a>
+    </div>
+    <div>
+        {% block body %}{% endblock %}
+    </div>
 </body>
 
 </html>
