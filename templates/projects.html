@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Yottaclock Projects{% endblock %}
+
+{% block body %}
+<h1>Projects</h1>
+<ul>
+    {% for project in projects %}
+    <li>
+        <p>{{ project.name }}</p>
+        <p>Daily Goal: {{ project.daily_goal }}</p>
+        <p>Starting Date: {{ project.starting_date }}</p>
+        <p>
+            Weekdays:
+            {% if project.weekdays.monday %}Monday, {% endif %}
+            {% if project.weekdays.tuesday %}Tuesday, {% endif %}
+            {% if project.weekdays.wednesday %}Wednesday, {% endif %}
+            {% if project.weekdays.thursday %}Thursday, {% endif %}
+            {% if project.weekdays.friday %}Friday, {% endif %}
+            {% if project.weekdays.saturday %}Saturday, {% endif %}
+            {% if project.weekdays.sunday %}Sunday, {% endif %}
+        </p>
+        <form method="post" action="/project/delete/">
+            <input type="hidden" name="project_id" value="{{ project.id }}" />
+            <input type="submit" value="Delete" />
+        </form>
+    </li>
+    {% endfor %}
+</ul>
+{% endblock %}

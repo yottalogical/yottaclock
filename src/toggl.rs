@@ -91,23 +91,23 @@ impl From<TogglResponseData> for TogglEntry {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-struct WhichWeekdays {
-    monday: bool,
-    tuesday: bool,
-    wednesday: bool,
-    thursday: bool,
-    friday: bool,
-    saturday: bool,
-    sunday: bool,
+pub struct WhichWeekdays {
+    pub monday: bool,
+    pub tuesday: bool,
+    pub wednesday: bool,
+    pub thursday: bool,
+    pub friday: bool,
+    pub saturday: bool,
+    pub sunday: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-struct Project {
-    name: String,
-    starting_date: NaiveDate,
-    daily_goal: Duration,
-    days_off: HashSet<NaiveDate>,
-    weekdays: WhichWeekdays,
+pub struct Project {
+    pub name: String,
+    pub starting_date: NaiveDate,
+    pub daily_goal: Duration,
+    pub days_off: HashSet<NaiveDate>,
+    pub weekdays: WhichWeekdays,
 }
 
 #[derive(Debug, PartialEq)]
@@ -257,7 +257,7 @@ pub async fn calculate_goals(
     })
 }
 
-async fn get_user_projects(
+pub async fn get_user_projects(
     toggl_api_token: &str,
     workspace_id: WorkspaceId,
     client: &Client,

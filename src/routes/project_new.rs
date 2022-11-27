@@ -15,7 +15,7 @@ use crate::{
 };
 
 #[derive(Template)]
-#[template(path = "newproject.html")]
+#[template(path = "project_new.html")]
 pub struct NewProjectTemplate<'a> {
     projects: &'a [TogglProject],
 }
