@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Yottaclock New Day Off{% endblock %}
+
+{% block body %}
+<h1>New Day Off</h1>
+<form method="post">
+    <label for="date">Date:</label>
+    <input type="date" required name="date" />
+    <br />
+
+    {% for project in projects %}
+    <label for="{{ project.id }}">{{ project.name }}:</label>
+    <input type="checkbox" checked name="{{ project.id }}" />
+    <br />
+    {% endfor %}
+
+    <input type="submit" />
+</form>
+{% endblock %}

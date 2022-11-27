@@ -27,7 +27,10 @@ CREATE TABLE projects (
 
 CREATE TABLE days_off (
     day_off_key BIGSERIAL PRIMARY KEY,
-    day_off DATE NOT NULL
+    user_key BIGINT NOT NULL REFERENCES users(user_key) ON DELETE CASCADE,
+    day_off DATE NOT NULL,
+
+    UNIQUE (user_key, day_off)
 );
 
 CREATE TABLE days_off_to_projects (

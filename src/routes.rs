@@ -4,6 +4,7 @@ use axum::{
 };
 
 mod account;
+mod dayoff_new;
 mod index;
 mod login;
 mod project_delete;
@@ -23,4 +24,6 @@ pub fn router() -> Router {
         .route("/project/delete/", post(project_delete::post))
         .route("/account/", get(account::get))
         .route("/account/", post(account::post))
+        .route("/dayoff/new/", get(dayoff_new::get))
+        .route("/dayoff/new/", post(dayoff_new::post))
 }

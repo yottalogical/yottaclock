@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{num::ParseIntError, str::FromStr};
 
 use axum::{
     http::{header::InvalidHeaderValue, StatusCode},
@@ -23,6 +23,9 @@ pub enum InternalError {
 
     #[error("Fatal UnrecognizedTimezone error: {0}")]
     UnrecognizedTimezone(<Tz as FromStr>::Err),
+
+    #[error("Fatal ParseInt error: {0}")]
+    ParseInt(#[from] ParseIntError),
 }
 
 pub type InternalResult<T, E = InternalError> = Result<T, E>;
