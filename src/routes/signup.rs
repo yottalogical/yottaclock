@@ -48,7 +48,7 @@ pub async fn post(
 
     // Check if the data from the form is valid
     let workspace = get_workspace_details(&form.toggl_api_key, form.workspace_id, client).await?;
-    let positive_daily_max = daily_max >= Duration::seconds(0);
+    let positive_daily_max = daily_max >= Duration::zero();
     let timezone: Result<Tz, <Tz as FromStr>::Err> = form.timezone.parse();
 
     Ok(

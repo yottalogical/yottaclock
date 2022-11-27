@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Yottaclock Account{% endblock %}
+
+{% block body %}
+<h1>Account Settings</h1>
+<form method="post">
+    <label for="daily_max_hours">Daily Limit:</label>
+    <input type="number" min="0" step="1" required name="daily_max_hours" placeholder="hours"
+        value="{{ daily_max_hours }}" />
+    <input type="number" min="0" step="1" required name="daily_max_minutes" placeholder="minutes"
+        value="{{ daily_max_minutes }}" />
+    <input type="number" min="0" step="1" required name="daily_max_seconds" placeholder="seconds"
+        value="{{ daily_max_seconds }}" />
+    <br />
+
+    <label for="toggl_api_key">Timezone:</label>
+    <select required name="timezone">
+        {% for timezone in timezones %}
+        {% if timezone == user_timezone %}
+        <option selected>{{ timezone }}</option>
+        {% else %}
+        <option>{{ timezone }}</option>
+        {% endif %}
+        {% endfor %}
+    </select>
+    <br />
+
+    <input type="submit" />
+</form>
+{% endblock %}

@@ -456,13 +456,13 @@ fn process_toggl_data(
                 project_id,
                 ProjectWithDebt {
                     project,
-                    debt: Duration::seconds(0),
+                    debt: Duration::zero(),
                 },
             )
         })
         .collect();
 
-    let mut total_debt = Duration::seconds(0);
+    let mut total_debt = Duration::zero();
 
     for entry in sorted_toggl_entries {
         // Increment the current date until it's caught up to this entry
@@ -488,7 +488,7 @@ fn process_toggl_data(
         {
             if project.starting_date <= entry.date {
                 // Only subtract from the total debt while the project debt is positive
-                total_debt = total_debt - max(min(*debt, entry.duration), Duration::seconds(0));
+                total_debt = total_debt - max(min(*debt, entry.duration), Duration::zero());
 
                 *debt = *debt - entry.duration;
             }
@@ -517,7 +517,7 @@ fn advance_debt(
     // Increment the current date
     *current_date = *current_date + Days::new(1);
 
-    let mut total_debt = Duration::seconds(0);
+    let mut total_debt = Duration::zero();
 
     // Increase the debts
     for ProjectWithDebt { project, debt } in projects_with_debts.values_mut() {
@@ -534,7 +534,7 @@ fn advance_debt(
     }
 
     // If they exceeded their goal yesterday, carry over the extra to today
-    if previous_total_debt < Duration::seconds(0) {
+    if previous_total_debt < Duration::zero() {
         total_debt = total_debt + previous_total_debt;
     }
 

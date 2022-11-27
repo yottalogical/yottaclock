@@ -9,11 +9,10 @@ use sqlx::PgPool;
 
 use crate::{
     errors::InternalResult,
+    human_duration::HumanDuration,
     session::UserKey,
     toggl::{get_user_projects, ProjectId, WhichWeekdays, WorkspaceId},
 };
-
-use super::index::HumanDuration;
 
 struct Project {
     pub id: ProjectId,

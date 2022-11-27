@@ -9,6 +9,7 @@ use tower_http::trace::TraceLayer;
 use tracing::info;
 
 mod errors;
+mod human_duration;
 mod routes;
 mod session;
 mod toggl;
