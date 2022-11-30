@@ -17,7 +17,7 @@ pub fn hours_minutes_seconds(duration: Duration) -> (i64, i64, i64) {
 
 impl Display for HumanDuration {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let (absolute_duration, sign) = if self.0 > Duration::zero() {
+        let (absolute_duration, sign) = if self.0 >= Duration::zero() {
             (self.0, "")
         } else {
             (-self.0, "-")
