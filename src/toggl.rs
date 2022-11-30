@@ -398,7 +398,7 @@ async fn call_toggl_api(
         let response = client
             .get("https://api.track.toggl.com/reports/api/v2/details")
             .query(&TogglQuery {
-                user_agent: "yottaclock",
+                user_agent: "yottaclock.com",
                 workspace_id: workspace_id.0,
                 since,
                 page,
