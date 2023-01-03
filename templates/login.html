@@ -5,11 +5,13 @@
 {% block body %}
 <h1>Login</h1>
 <form method="post">
-    <label for="toggl_api_key">Toggl API Token:</label>
-    <input type="text" required name="toggl_api_key" />
-    <br />
+    <div class="form-floating mb-3">
+        <input type="text" required name="toggl_api_key" id="togglApiKey" class="form-control"
+            placeholder="1971800d4d82861d8f2c1651fea4d212" />
+        <label for="togglApiKey">Toggl API Token</label>
+    </div>
 
-    <input type="submit" />
+    <input type="submit" class="btn btn-primary" />
 </form>
 
 {% if unrecognized_api_token %}
