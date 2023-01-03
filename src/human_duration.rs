@@ -2,7 +2,6 @@ use std::fmt::{self, Display, Formatter};
 
 use chrono::Duration;
 
-#[cfg(test)]
 mod tests;
 
 pub struct HumanDuration(pub Duration);
