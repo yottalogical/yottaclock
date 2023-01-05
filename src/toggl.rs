@@ -533,7 +533,7 @@ fn advance_debt(
             *debt = *debt + project.daily_goal;
         }
 
-        total_debt = total_debt + *debt;
+        total_debt = total_debt + max(*debt, Duration::zero());
     }
 
     // Ensure the total debt doesn't exceed the daily max
