@@ -3,7 +3,7 @@ use axum::{
     extract::Extension,
     response::{Html, IntoResponse},
 };
-use chrono::NaiveDate;
+use chrono::{Duration, NaiveDate};
 use reqwest::Client;
 use sqlx::PgPool;
 
@@ -19,6 +19,7 @@ struct Project {
     pub name: String,
     pub starting_date: NaiveDate,
     pub daily_goal: HumanDuration,
+    pub weekly_goal: HumanDuration,
     pub weekdays: WhichWeekdays,
 }
 
@@ -26,6 +27,8 @@ struct Project {
 #[template(path = "projects.html")]
 pub struct ProjectsTemplate<'a> {
     projects: &'a [Project],
+    total_weekly_goal: HumanDuration,
+    average_daily_goal: HumanDuration,
 }
 
 pub async fn get(
@@ -54,13 +57,20 @@ pub async fn get(
         name: project.name,
         starting_date: project.starting_date,
         daily_goal: HumanDuration(project.daily_goal),
+        weekly_goal: HumanDuration(project.daily_goal * project.weekdays.num_days()),
         weekdays: project.weekdays,
     })
     .collect();
     projects.sort_by(|lhs, rhs| lhs.name.cmp(&rhs.name));
 
+    let total_weekly_goal = projects
+        .iter()
+        .fold(Duration::zero(), |acc, project| acc + project.weekly_goal.0);
+
     let template = ProjectsTemplate {
         projects: &projects,
+        total_weekly_goal: HumanDuration(total_weekly_goal),
+        average_daily_goal: HumanDuration(total_weekly_goal / 7),
     };
 
     Ok(Html(template.render()?))

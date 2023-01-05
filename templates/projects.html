@@ -4,12 +4,15 @@
 
 {% block body %}
 <h1>Projects</h1>
+<p>Total Weekly Goal: {{ total_weekly_goal }}</p>
+<p>Average Daily Goal: {{ average_daily_goal }}</p>
 <a href="/project/new/">Create New Project</a>
 <ul>
     {% for project in projects %}
     <li>
         <p>{{ project.name }}</p>
         <p>Daily Goal: {{ project.daily_goal }}</p>
+        <p>Weekly Goal: {{ project.weekly_goal }}</p>
         <p>Starting Date: {{ project.starting_date }}</p>
         <p>
             Weekdays:

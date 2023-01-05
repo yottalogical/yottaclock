@@ -100,6 +100,22 @@ pub struct WhichWeekdays {
     pub sunday: bool,
 }
 
+impl WhichWeekdays {
+    pub fn num_days(&self) -> i32 {
+        let mut total = 0;
+
+        total += if self.monday { 1 } else { 0 };
+        total += if self.tuesday { 1 } else { 0 };
+        total += if self.wednesday { 1 } else { 0 };
+        total += if self.thursday { 1 } else { 0 };
+        total += if self.friday { 1 } else { 0 };
+        total += if self.saturday { 1 } else { 0 };
+        total += if self.sunday { 1 } else { 0 };
+
+        total
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Project {
     pub name: String,
