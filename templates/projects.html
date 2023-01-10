@@ -3,29 +3,35 @@
 {% block title %}Yottaclock Projects{% endblock %}
 
 {% block body %}
-<h1>Projects</h1>
-<a href="/project/new/">Create New Project</a>
-<ul>
+<div class="d-flex justify-content-between">
+    <h1>Projects</h1>
+    <a class="btn btn-primary align-self-start" href="/project/new/">+</a>
+</div>
+
+<div class="row g-4 row-cols-4">
     {% for project in projects %}
-    <li>
-        <p>{{ project.name }}</p>
-        <p>Daily Goal: {{ project.daily_goal }}</p>
-        <p>Starting Date: {{ project.starting_date }}</p>
-        <p>
-            Weekdays:
-            {% if project.weekdays.monday %}Monday, {% endif %}
-            {% if project.weekdays.tuesday %}Tuesday, {% endif %}
-            {% if project.weekdays.wednesday %}Wednesday, {% endif %}
-            {% if project.weekdays.thursday %}Thursday, {% endif %}
-            {% if project.weekdays.friday %}Friday, {% endif %}
-            {% if project.weekdays.saturday %}Saturday, {% endif %}
-            {% if project.weekdays.sunday %}Sunday, {% endif %}
-        </p>
-        <form method="post" action="/project/delete/">
-            <input type="hidden" name="project_id" value="{{ project.id }}" />
-            <input type="submit" value="Delete" />
-        </form>
-    </li>
+    <div class="col">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">{{ project.name }}</h5>
+                <p class="card-text">Daily Goal: {{ project.daily_goal }}</p>
+                <p class="card-text">Starting Date: {{ project.starting_date }}</p>
+                <p class="card-text">
+                    {% if project.weekdays.monday %}<span class="badge text-bg-secondary">Monday</span>{% endif %}
+                    {% if project.weekdays.tuesday %}<span class="badge text-bg-secondary">Tuesday</span>{% endif %}
+                    {% if project.weekdays.wednesday %}<span class="badge text-bg-secondary">Wednesday</span>{% endif %}
+                    {% if project.weekdays.thursday %}<span class="badge text-bg-secondary">Thursday</span>{% endif %}
+                    {% if project.weekdays.friday %}<span class="badge text-bg-secondary">Friday</span>{% endif %}
+                    {% if project.weekdays.saturday %}<span class="badge text-bg-secondary">Saturday</span>{% endif %}
+                    {% if project.weekdays.sunday %}<span class="badge text-bg-secondary">Sunday</span>{% endif %}
+                </p>
+                <form method="post" action="/project/delete/">
+                    <input type="hidden" name="project_id" value="{{ project.id }}" />
+                    <input class="btn btn-primary" type="submit" value="Delete" />
+                </form>
+            </div>
+        </div>
+    </div>
     {% endfor %}
-</ul>
+</div>
 {% endblock %}
