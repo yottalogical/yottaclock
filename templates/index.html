@@ -4,16 +4,24 @@
 
 {% block body %}
 <h1>Yottaclock</h1>
-<p>
-    {{ total_debt }}
-</p>
 
-<ul>
+<div class="text-end mb-2">
+    {{ total_debt }}
+</div>
+<div class="progress mb-3" role="progressbar">
+    <div class="progress-bar" style="width: {{ percentage }}%"></div>
+</div>
+
+<div class="row g-4 row-cols-auto">
     {% for goal in goals %}
-    <li>
-        <p>{{ goal.name }}</p>
-        <p>{{ goal.time }}</p>
-    </li>
+    <div class="col">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">{{ goal.name }}</h5>
+                <p class="card-text">{{ goal.time }}</p>
+            </div>
+        </div>
+    </div>
     {% endfor %}
-</ul>
+</div>
 {% endblock %}
