@@ -5,52 +5,71 @@
 {% block body %}
 <h1 class="mb-3">New Project</h1>
 <form method="post">
-    <label for="project_id">Toggl Project:</label>
-    <select required name="project_id">
-        {% for project in projects %}
-        <option value="{{ project.id }}">{{ project.name }}</option>
-        {% endfor %}
-    </select>
-    <br />
+    <div class="input-group mb-3">
+        <span class="input-group-text">Toggl Project</span>
+        <select required name="project_id" class="form-select">
+            {% for project in projects %}
+            <option value="{{ project.id }}">{{ project.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
 
-    <label for="starting_date">Starting Date:</label>
-    <input type="date" required name="starting_date" />
-    <br />
+    <div class="input-group mb-3">
+        <span class="input-group-text">Starting Date</span>
+        <input type="date" class="form-control" required name="starting_date" />
+        <br />
+    </div>
 
-    <label for="daily_goal_hours">Daily Goal:</label>
-    <input type="number" min="0" step="1" required name="daily_goal_hours" placeholder="hours" />
-    <input type="number" min="0" step="1" required name="daily_goal_minutes" placeholder="minutes" />
-    <input type="number" min="0" step="1" required name="daily_goal_seconds" placeholder="seconds" />
-    <br />
+    <div class="input-group mb-3">
+        <span class="input-group-text">Daily Goal</span>
+        <div class="form-floating">
+            <input type="number" min="0" step="1" required name="daily_goal_hours" id="dailyGoalHours"
+                class="form-control" placeholder="0" />
+            <label for="dailyGoalHours">Hours</label>
+        </div>
+        <div class="form-floating">
+            <input type="number" min="0" step="1" required name="daily_goal_minutes" id="dailyGoalMinutes"
+                class="form-control" placeholder="0" />
+            <label for="dailyGoalMinutes">Minutes</label>
+        </div>
+        <div class="form-floating">
+            <input type="number" min="0" step="1" required name="daily_goal_seconds" id="dailyGoalSeconds"
+                class="form-control" placeholder="0" />
+            <label for="dailyGoalSeconds">Seconds</label>
+        </div>
+    </div>
 
-    <label for="monday">Monday:</label>
-    <input type="checkbox" checked name="monday" />
-    <br />
+    <div class="mb-3">
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" name="monday" type="checkbox" id="mondayCheckbox" value="" checked />
+            <label class="form-check-label" for="mondayCheckbox">Monday</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" name="tuesday" type="checkbox" id="tuesdayCheckbox" value="" checked />
+            <label class="form-check-label" for="tuesdayCheckbox">Tuesday</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" name="wednesday" type="checkbox" id="wednesdayCheckbox" value="" checked />
+            <label class="form-check-label" for="wednesdayCheckbox">Wednesday</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" name="thursday" type="checkbox" id="thursdayCheckbox" value="" checked />
+            <label class="form-check-label" for="thursdayCheckbox">Thursday</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" name="friday" type="checkbox" id="fridayCheckbox" value="" checked />
+            <label class="form-check-label" for="fridayCheckbox">Friday</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" name="saturday" type="checkbox" id="saturdayCheckbox" value="" checked />
+            <label class="form-check-label" for="saturdayCheckbox">Saturday</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" name="sunday" type="checkbox" id="sundayCheckbox" value="" checked />
+            <label class="form-check-label" for="sundayCheckbox">Sunday</label>
+        </div>
+    </div>
 
-    <label for="tuesday">Tuesday:</label>
-    <input type="checkbox" checked name="tuesday" />
-    <br />
-
-    <label for="wednesday">Wednesday:</label>
-    <input type="checkbox" checked name="wednesday" />
-    <br />
-
-    <label for="thursday">Thursday:</label>
-    <input type="checkbox" checked name="thursday" />
-    <br />
-
-    <label for="friday">Friday:</label>
-    <input type="checkbox" checked name="friday" />
-    <br />
-
-    <label for="saturday">Saturday:</label>
-    <input type="checkbox" checked name="saturday" />
-    <br />
-
-    <label for="sunday">Sunday:</label>
-    <input type="checkbox" checked name="sunday" />
-    <br />
-
-    <input type="submit" />
+    <input type="submit" class="btn btn-primary" />
 </form>
 {% endblock %}
