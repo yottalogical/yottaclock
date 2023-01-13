@@ -42,9 +42,12 @@ pub async fn get(
     Extension(pool): Extension<PgPool>,
     Extension(client): Extension<Client>,
 ) -> InternalResult<impl IntoResponse> {
-    let record = sqlx::query!("SELECT daily_max FROM users WHERE user_key = 1")
-        .fetch_one(&pool)
-        .await?;
+    let record = sqlx::query!(
+        "SELECT daily_max FROM users WHERE user_key = $1",
+        user_key.0
+    )
+    .fetch_one(&pool)
+    .await?;
 
     let daily_max = Duration::seconds(record.daily_max);
 
