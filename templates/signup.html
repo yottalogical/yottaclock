@@ -7,28 +7,43 @@
 <form method="post" action="/signup/">
     <input type="hidden" name="toggl_api_key" value="{{ toggl_api_key }}" />
 
-    <label for="workspace_id">Workspace:</label>
-    <select required name="workspace_id">
-        {% for workspace in workspaces %}
-        <option value="{{ workspace.id }}">{{ workspace.name }}</option>
-        {% endfor %}
-    </select>
-    <br />
+    <div class="input-group mb-3">
+        <span class="input-group-text">Workspace</span>
+        <select required name="workspace_id" class="form-select">
+            {% for workspace in workspaces %}
+            <option value="{{ workspace.id }}">{{ workspace.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
 
-    <label for="daily_max_hours">Daily Limit:</label>
-    <input type="number" min="0" step="1" required name="daily_max_hours" placeholder="hours" />
-    <input type="number" min="0" step="1" required name="daily_max_minutes" placeholder="minutes" />
-    <input type="number" min="0" step="1" required name="daily_max_seconds" placeholder="seconds" />
-    <br />
+    <div class="input-group mb-3">
+        <span class="input-group-text">Daily Limit</span>
+        <div class="form-floating">
+            <input type="number" min="0" step="1" required name="daily_max_hours" id="dailyMaxHours"
+                class="form-control" placeholder="0" />
+            <label for="dailyMaxHours">Hours</label>
+        </div>
+        <div class="form-floating">
+            <input type="number" min="0" step="1" required name="daily_max_minutes" id="dailyMaxMinutes"
+                class="form-control" placeholder="0" />
+            <label for="dailyMaxMinutes">Minutes</label>
+        </div>
+        <div class="form-floating">
+            <input type="number" min="0" step="1" required name="daily_max_seconds" id="dailyMaxSeconds"
+                class="form-control" placeholder="0" />
+            <label for="dailyMaxSeconds">Seconds</label>
+        </div>
+    </div>
 
-    <label for="toggl_api_key">Timezone:</label>
-    <select required name="timezone">
-        {% for timezone in timezones %}
-        <option>{{ timezone }}</option>
-        {% endfor %}
-    </select>
-    <br />
+    <div class="input-group mb-3">
+        <span class="input-group-text">Timezone</span>
+        <select required name="timezone" class="form-select">
+            {% for timezone in timezones %}
+            <option>{{ timezone }}</option>
+            {% endfor %}
+        </select>
+    </div>
 
-    <input type="submit" />
+    <input type="submit" class="btn btn-primary" />
 </form>
 {% endblock %}
