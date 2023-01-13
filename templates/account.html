@@ -5,27 +5,38 @@
 {% block body %}
 <h1>Account Settings</h1>
 <form method="post">
-    <label for="daily_max_hours">Daily Limit:</label>
-    <input type="number" min="0" step="1" required name="daily_max_hours" placeholder="hours"
-        value="{{ daily_max_hours }}" />
-    <input type="number" min="0" step="1" required name="daily_max_minutes" placeholder="minutes"
-        value="{{ daily_max_minutes }}" />
-    <input type="number" min="0" step="1" required name="daily_max_seconds" placeholder="seconds"
-        value="{{ daily_max_seconds }}" />
-    <br />
+    <div class="input-group mb-3">
+        <span class="input-group-text">Daily Limit</span>
+        <div class="form-floating">
+            <input type="number" min="0" step="1" required name="daily_max_hours" id="dailyMaxHours"
+                class="form-control" placeholder="0" value="{{ daily_max_hours }}" />
+            <label for="dailyMaxHours">Hours</label>
+        </div>
+        <div class="form-floating">
+            <input type="number" min="0" step="1" required name="daily_max_minutes" id="dailyMaxMinutes"
+                class="form-control" placeholder="0" value="{{ daily_max_minutes }}" />
+            <label for="dailyMaxMinutes">Minutes</label>
+        </div>
+        <div class="form-floating">
+            <input type="number" min="0" step="1" required name="daily_max_seconds" id="dailyMaxSeconds"
+                class="form-control" placeholder="0" value="{{ daily_max_seconds }}" />
+            <label for="dailyMaxSeconds">Seconds</label>
+        </div>
+    </div>
 
-    <label for="toggl_api_key">Timezone:</label>
-    <select required name="timezone">
-        {% for timezone in timezones %}
-        {% if timezone == user_timezone %}
-        <option selected>{{ timezone }}</option>
-        {% else %}
-        <option>{{ timezone }}</option>
-        {% endif %}
-        {% endfor %}
-    </select>
-    <br />
+    <div class="input-group mb-3">
+        <span class="input-group-text">Timezone</span>
+        <select required name="timezone" class="form-select">
+            {% for timezone in timezones %}
+            {% if timezone == user_timezone %}
+            <option selected>{{ timezone }}</option>
+            {% else %}
+            <option>{{ timezone }}</option>
+            {% endif %}
+            {% endfor %}
+        </select>
+    </div>
 
-    <input type="submit" />
+    <input type="submit" class="btn btn-primary" />
 </form>
 {% endblock %}
