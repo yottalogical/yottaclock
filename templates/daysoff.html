@@ -3,18 +3,29 @@
 {% block title %}Yottaclock Days Off{% endblock %}
 
 {% block body %}
-<h1>Days Off</h1>
-<a href="/dayoff/new/">Create New Day Off</a>
-<ul>
+<div class="d-flex justify-content-between mb-3">
+    <h1>Days Off</h1>
+    <a class="btn btn-primary align-self-center" href="/dayoff/new/">+</a>
+</div>
+
+<div class="row g-4 row-cols-2 row-cols-md-3 row-cols-lg-4">
     {% for day_off in days_off %}
-    <li>
-        <p>{{ day_off.date }}</p>
-        <p>Projects: {% for project in day_off.projects %}{{ project.name }}, {% endfor %}</p>
-        <form method="post" action="/dayoff/delete/">
-            <input type="hidden" name="day_off_key" value="{{ day_off.key }}" />
-            <input type="submit" value="Delete" />
-        </form>
-    </li>
+    <div class="col">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">{{ day_off.date }}</h5>
+                <p class="card-text">
+                    {% for project in day_off.projects %}
+                    <span class="badge text-bg-secondary">{{ project.name }}</span>
+                    {% endfor %}
+                </p>
+                <form method="post" action="/dayoff/delete/">
+                    <input type="hidden" name="day_off_key" value="{{ day_off.key }}" />
+                    <input class="btn btn-primary" type="submit" value="Delete" />
+                </form>
+            </div>
+        </div>
+    </div>
     {% endfor %}
-</ul>
+</div>
 {% endblock %}
