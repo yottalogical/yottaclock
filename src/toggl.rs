@@ -17,7 +17,6 @@ use crate::{
     session::UserKey,
 };
 
-#[cfg(test)]
 mod tests;
 
 pub struct Goal {
@@ -99,6 +98,22 @@ pub struct WhichWeekdays {
     pub friday: bool,
     pub saturday: bool,
     pub sunday: bool,
+}
+
+impl WhichWeekdays {
+    pub fn num_days(&self) -> i32 {
+        let mut total = 0;
+
+        total += if self.monday { 1 } else { 0 };
+        total += if self.tuesday { 1 } else { 0 };
+        total += if self.wednesday { 1 } else { 0 };
+        total += if self.thursday { 1 } else { 0 };
+        total += if self.friday { 1 } else { 0 };
+        total += if self.saturday { 1 } else { 0 };
+        total += if self.sunday { 1 } else { 0 };
+
+        total
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -264,24 +279,33 @@ pub async fn get_user_projects(
     user_key: UserKey,
     pool: &PgPool,
 ) -> InternalResult<HashMap<ProjectId, Project>> {
-    let records_future = sqlx::query!(
+    let toggl_projects = get_toggl_projects(toggl_api_token, workspace_id, client).await?;
+
+    get_user_projects_from_toggl_projects(toggl_projects, user_key, pool).await
+}
+
+async fn get_user_projects_from_toggl_projects(
+    toggl_projects: Vec<TogglProject>,
+    user_key: UserKey,
+    pool: &PgPool,
+) -> InternalResult<HashMap<ProjectId, Project>> {
+    let records = sqlx::query!(
         "SELECT project_key, project_id, starting_date, daily_goal,
             monday, tuesday, wednesday, thursday, friday, saturday, sunday
         FROM projects
         WHERE user_key = $1",
         user_key.0,
     )
-    .fetch_all(pool);
-    let toggl_projects_future = get_toggl_projects(toggl_api_token, workspace_id, client);
-    let (records, toggl_projects) = future::join(records_future, toggl_projects_future).await;
+    .fetch_all(pool)
+    .await?;
 
-    let project_id_to_name: HashMap<ProjectId, String> = toggl_projects?
+    let project_id_to_name: HashMap<ProjectId, String> = toggl_projects
         .into_iter()
         .map(|project| (project.id, project.name))
         .collect();
 
     let mut futures = Vec::new();
-    for record in records? {
+    for record in records {
         if let Some(project_name) = project_id_to_name.get(&ProjectId(record.project_id)) {
             futures.push(async move {
                 let days_off = sqlx::query!(
@@ -290,7 +314,7 @@ pub async fn get_user_projects(
                     INNER JOIN days_off_to_projects
                     ON days_off.day_off_key = days_off_to_projects.day_off_key
                     WHERE days_off_to_projects.project_key = $1",
-                    user_key.0,
+                    record.project_key,
                 )
                 .fetch_all(pool)
                 .await?;
@@ -525,7 +549,7 @@ fn advance_debt(
             *debt = *debt + project.daily_goal;
         }
 
-        total_debt = total_debt + *debt;
+        total_debt = total_debt + max(*debt, Duration::zero());
     }
 
     // Ensure the total debt doesn't exceed the daily max

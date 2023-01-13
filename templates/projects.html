@@ -8,6 +8,9 @@
     <a class="btn btn-primary align-self-center" href="/project/new/">+</a>
 </div>
 
+<p>Total Weekly Goal: {{ total_weekly_goal }}</p>
+<p>Average Daily Goal: {{ average_daily_goal }}</p>
+
 <div class="row g-4 row-cols-2 row-cols-md-3 row-cols-lg-4">
     {% for project in projects %}
     <div class="col">
@@ -15,6 +18,7 @@
             <div class="card-body">
                 <h5 class="card-title">{{ project.name }}</h5>
                 <p class="card-text">Daily Goal: {{ project.daily_goal }}</p>
+                <p class="card-text">Weekly Goal: {{ project.weekly_goal }}</p>
                 <p class="card-text">Starting Date: {{ project.starting_date }}</p>
                 <p class="card-text">
                     {% if project.weekdays.monday %}<span class="badge text-bg-secondary">Monday</span>{% endif %}
