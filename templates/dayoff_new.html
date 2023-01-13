@@ -5,16 +5,24 @@
 {% block body %}
 <h1 class="mb-3">New Day Off</h1>
 <form method="post">
-    <label for="date">Date:</label>
-    <input type="date" required name="date" />
-    <br />
+    <div class="input-group mb-3">
+        <span class="input-group-text">Date</span>
+        <input type="date" class="form-control" required name="date" />
+        <br />
+    </div>
 
-    {% for project in projects %}
-    <label for="{{ project.id }}">{{ project.name }}:</label>
-    <input type="checkbox" checked name="{{ project.id }}" />
-    <br />
-    {% endfor %}
+    <div class="mb-3">
+        {% for project in projects %}
+        <div class="form-check">
+            <input class="form-check-input" name="{{ project.id }}" type="checkbox" value=""
+                id="project{{ project.id }}" checked />
+            <label class="form-check-label" for="project{{ project.id }}">
+                {{ project.name }}
+            </label>
+        </div>
+        {% endfor %}
+    </div>
 
-    <input type="submit" />
+    <input type="submit" class="btn btn-primary" />
 </form>
 {% endblock %}
