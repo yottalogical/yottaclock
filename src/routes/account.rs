@@ -2,6 +2,7 @@ use std::str::FromStr;
 
 use askama::Template;
 use axum::{
+    debug_handler,
     extract::{Extension, Form},
     http::StatusCode,
     response::{Html, IntoResponse, Redirect},
@@ -27,6 +28,7 @@ struct AccountTemplate<'a> {
     timezones: &'a [Tz],
 }
 
+#[debug_handler]
 pub async fn get(
     user_key: UserKey,
     Extension(pool): Extension<PgPool>,
@@ -65,6 +67,7 @@ pub struct AccountForm {
     timezone: String,
 }
 
+#[debug_handler]
 pub async fn post(
     user_key: UserKey,
     Extension(pool): Extension<PgPool>,

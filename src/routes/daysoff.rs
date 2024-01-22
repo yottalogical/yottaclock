@@ -2,6 +2,7 @@ use std::fmt::{self, Display, Formatter};
 
 use askama::Template;
 use axum::{
+    debug_handler,
     extract::Extension,
     response::{Html, IntoResponse},
 };
@@ -38,6 +39,7 @@ pub struct DaysOffTemplate<'a> {
     days_off: &'a [DayOff<'a>],
 }
 
+#[debug_handler]
 pub async fn get(
     user_key: UserKey,
     Extension(pool): Extension<PgPool>,

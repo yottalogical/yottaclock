@@ -5,6 +5,7 @@ use dotenvy::dotenv;
 use reqwest::Client;
 use sqlx::postgres::PgPoolOptions;
 use std::net::SocketAddr;
+use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 use tracing::info;
 
@@ -40,8 +41,12 @@ async fn main() {
         .layer(Extension(client));
 
     info!("Starting hyper server");
-    axum::Server::bind(&SocketAddr::from(([0, 0, 0, 0], 8000)))
-        .serve(app.into_make_service())
-        .await
-        .expect("Error running hyper server");
+    axum::serve(
+        TcpListener::bind(SocketAddr::from(([0, 0, 0, 0], 8000)))
+            .await
+            .unwrap(),
+        app,
+    )
+    .await
+    .expect("Error running hyper server");
 }

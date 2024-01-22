@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use askama::Template;
 use axum::{
+    debug_handler,
     extract::{Extension, Form},
     response::{Html, IntoResponse, Redirect},
 };
@@ -28,6 +29,7 @@ pub struct NewDayOffTemplate<'a> {
     projects: &'a [Project],
 }
 
+#[debug_handler]
 pub async fn get(
     user_key: UserKey,
     Extension(pool): Extension<PgPool>,
@@ -73,6 +75,7 @@ pub struct NewDayOffForm {
     project_ids: HashMap<String, String>,
 }
 
+#[debug_handler]
 pub async fn post(
     user_key: UserKey,
     Extension(pool): Extension<PgPool>,

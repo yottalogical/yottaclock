@@ -5,6 +5,7 @@ use crate::{
 };
 use askama::Template;
 use axum::{
+    debug_handler,
     extract::Extension,
     response::{Html, IntoResponse, Redirect},
 };
@@ -37,6 +38,7 @@ pub struct Index {
     pub goals: Vec<Goal>,
 }
 
+#[debug_handler]
 pub async fn get(
     user_key: UserKey,
     Extension(pool): Extension<PgPool>,

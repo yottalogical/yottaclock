@@ -1,5 +1,6 @@
 use askama::Template;
 use axum::{
+    debug_handler,
     extract::Form,
     http::StatusCode,
     response::{Html, IntoResponse, Redirect},
@@ -24,6 +25,7 @@ pub struct LoginTemplate {
     unrecognized_api_token: bool,
 }
 
+#[debug_handler]
 pub async fn get() -> InternalResult<impl IntoResponse> {
     let template = LoginTemplate {
         unrecognized_api_token: false,
@@ -37,6 +39,7 @@ pub struct LoginForm {
     toggl_api_key: String,
 }
 
+#[debug_handler]
 pub async fn post(
     Extension(pool): Extension<PgPool>,
     Extension(client): Extension<Client>,

@@ -1,11 +1,9 @@
 use crate::errors::InternalResult;
 use axum::{
     async_trait,
-    body::BoxBody,
-    extract::{Extension, FromRequest, RequestParts, TypedHeader},
-    headers::{Cookie, HeaderName, HeaderValue},
-    http::{header::SET_COOKIE, Response, StatusCode},
-    response::{IntoResponse, Redirect},
+    extract::{Extension, FromRequestParts},
+    http::{header::SET_COOKIE, request::Parts, HeaderName, HeaderValue, StatusCode},
+    response::{IntoResponse, Redirect, Response},
 };
 use rand::distributions::{Alphanumeric, DistString};
 use sqlx::PgPool;
@@ -15,30 +13,28 @@ pub static SESSION_COOKIE_NAME: &str = "session";
 
 pub struct UserKey(pub i64);
 
-fn to_internal_server_error<E>(_: E) -> Response<BoxBody> {
+fn to_internal_server_error<E>(_: E) -> Response {
     StatusCode::INTERNAL_SERVER_ERROR.into_response()
 }
 
 #[async_trait]
-impl<B> FromRequest<B> for UserKey
+impl<S> FromRequestParts<S> for UserKey
 where
-    B: Send,
+    S: Send + Sync,
 {
-    type Rejection = Response<BoxBody>;
+    type Rejection = Response;
 
-    async fn from_request(req: &mut RequestParts<B>) -> Result<Self, Self::Rejection> {
-        let typed_headers = Option::<TypedHeader<Cookie>>::from_request(req)
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let Extension(pool) = Extension::from_request_parts(parts, state)
             .await
-            .map_err(to_internal_server_error)?;
+            .map_err(IntoResponse::into_response)?;
 
-        let token = typed_headers
-            .as_ref()
-            .and_then(|c| c.get(SESSION_COOKIE_NAME))
-            .ok_or_else(|| Redirect::to("/login/").into_response())?;
-
-        let Extension(pool) = Extension::from_request(req)
-            .await
-            .map_err(to_internal_server_error)?;
+        let token = parts
+            .headers
+            .get(SESSION_COOKIE_NAME)
+            .ok_or_else(|| Redirect::to("/login/").into_response())?
+            .to_str()
+            .map_err(|_| StatusCode::BAD_REQUEST.into_response())?;
 
         let user_key = sqlx::query!(
             "SELECT user_key FROM session_tokens WHERE token = $1",

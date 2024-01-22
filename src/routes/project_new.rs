@@ -1,5 +1,6 @@
 use askama::Template;
 use axum::{
+    debug_handler,
     extract::{Extension, Form},
     response::{Html, IntoResponse, Redirect},
 };
@@ -20,6 +21,7 @@ pub struct NewProjectTemplate<'a> {
     projects: &'a [TogglProject],
 }
 
+#[debug_handler]
 pub async fn get(
     user_key: UserKey,
     Extension(pool): Extension<PgPool>,
@@ -80,6 +82,7 @@ pub struct NewProjectForm {
     sunday: Option<String>,
 }
 
+#[debug_handler]
 pub async fn post(
     user_key: UserKey,
     Extension(pool): Extension<PgPool>,

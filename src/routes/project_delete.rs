@@ -1,4 +1,5 @@
 use axum::{
+    debug_handler,
     extract::{Extension, Form},
     response::{IntoResponse, Redirect},
 };
@@ -12,6 +13,7 @@ pub struct ProjectDeleteForm {
     project_id: ProjectId,
 }
 
+#[debug_handler]
 pub async fn post(
     user_key: UserKey,
     Extension(pool): Extension<PgPool>,

@@ -1,7 +1,6 @@
 use askama::Template;
 use axum::{
-    extract::Extension,
-    response::{Html, IntoResponse},
+    debug_handler, extract::Extension, response::{Html, IntoResponse}
 };
 use chrono::{Duration, NaiveDate};
 use reqwest::Client;
@@ -31,6 +30,7 @@ pub struct ProjectsTemplate<'a> {
     average_daily_goal: HumanDuration,
 }
 
+#[debug_handler]
 pub async fn get(
     user_key: UserKey,
     Extension(pool): Extension<PgPool>,

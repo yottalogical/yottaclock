@@ -1,4 +1,5 @@
 use axum::{
+    debug_handler,
     extract::{Extension, Form},
     response::{IntoResponse, Redirect},
 };
@@ -14,6 +15,7 @@ pub struct DayOffDeleteForm {
     day_off_key: DayOffKey,
 }
 
+#[debug_handler]
 pub async fn post(
     user_key: UserKey,
     Extension(pool): Extension<PgPool>,
