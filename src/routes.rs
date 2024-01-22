@@ -4,6 +4,7 @@ use axum::{
 };
 
 mod account;
+mod api;
 mod dayoff_delete;
 mod dayoff_new;
 mod daysoff;
@@ -30,4 +31,5 @@ pub fn router() -> Router {
         .route("/dayoff/new/", get(dayoff_new::get))
         .route("/dayoff/new/", post(dayoff_new::post))
         .route("/dayoff/delete/", post(dayoff_delete::post))
+        .route("/api/v1/status/", get(api::v1::status::get))
 }

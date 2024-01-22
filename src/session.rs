@@ -5,10 +5,16 @@ use axum::{
     http::{header::SET_COOKIE, request::Parts, HeaderName, HeaderValue, StatusCode},
     response::{IntoResponse, Redirect, Response},
 };
+use axum_extra::{
+    extract::CookieJar,
+    headers::{authorization::Basic, Authorization},
+    TypedHeader,
+};
 use rand::distributions::{Alphanumeric, DistString};
 use sqlx::PgPool;
 use std::env;
 
+pub static BASIC_AUTH_USERNAME: &str = "api_token";
 pub static SESSION_COOKIE_NAME: &str = "session";
 
 pub struct UserKey(pub i64);
@@ -29,22 +35,56 @@ where
             .await
             .map_err(IntoResponse::into_response)?;
 
-        let token = parts
-            .headers
-            .get(SESSION_COOKIE_NAME)
-            .ok_or_else(|| Redirect::to("/login/").into_response())?
-            .to_str()
-            .map_err(|_| StatusCode::BAD_REQUEST.into_response())?;
+        let cookie_jar = CookieJar::from_request_parts(parts, state)
+            .await
+            .map_err(to_internal_server_error)?;
 
-        let user_key = sqlx::query!(
-            "SELECT user_key FROM session_tokens WHERE token = $1",
-            token,
-        )
-        .fetch_optional(&pool)
-        .await
-        .map_err(to_internal_server_error)?
-        .map(|s| s.user_key)
-        .ok_or_else(|| StatusCode::BAD_REQUEST.into_response())?;
+        let session_token = cookie_jar
+            .get(SESSION_COOKIE_NAME)
+            .map(|cookie| cookie.value());
+
+        let basic_authorization: Option<TypedHeader<Authorization<Basic>>> =
+            match TypedHeader::from_request_parts(parts, state).await {
+                Ok(api_token) => Some(api_token),
+                Err(rejection) => {
+                    if rejection.is_missing() {
+                        None
+                    } else {
+                        return Err(StatusCode::INTERNAL_SERVER_ERROR.into_response());
+                    }
+                }
+            };
+
+        let user_key =
+            if let Some(TypedHeader(Authorization(basic_authorization))) = basic_authorization {
+                if basic_authorization.username() == BASIC_AUTH_USERNAME {
+                    let api_token = basic_authorization.password();
+
+                    sqlx::query!(
+                        "SELECT user_key FROM users WHERE toggl_api_key = $1",
+                        api_token,
+                    )
+                    .fetch_optional(&pool)
+                    .await
+                    .map_err(to_internal_server_error)?
+                    .map(|s| s.user_key)
+                    .ok_or_else(|| StatusCode::BAD_REQUEST.into_response())?
+                } else {
+                    return Err(StatusCode::INTERNAL_SERVER_ERROR.into_response());
+                }
+            } else if let Some(session_token) = session_token {
+                sqlx::query!(
+                    "SELECT user_key FROM session_tokens WHERE token = $1",
+                    session_token,
+                )
+                .fetch_optional(&pool)
+                .await
+                .map_err(to_internal_server_error)?
+                .map(|s| s.user_key)
+                .ok_or_else(|| StatusCode::BAD_REQUEST.into_response())?
+            } else {
+                return Err(Redirect::to("/login/").into_response());
+            };
 
         Ok(Self(user_key))
     }
