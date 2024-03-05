@@ -1,0 +1,7 @@
+[advisories]
+ignore = [
+    # The `rsa` crate isn't actually in the dependency tree
+    # It's just an optional dependency of sqlx that isn't enabled
+    # Run `cargo tree` to confirm that this is true
+    "RUSTSEC-2023-0071",
+]
