@@ -33,7 +33,11 @@ async fn main() {
         .await
         .expect("Could not run database migrations");
 
-    let client = Client::new();
+    let client = Client::builder()
+        .use_rustls_tls()
+        .https_only(true)
+        .build()
+        .expect("Could not create reqwest client");
 
     let app = routes::router()
         .layer(TraceLayer::new_for_http())
