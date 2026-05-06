@@ -1,6 +1,5 @@
 use crate::errors::InternalResult;
 use axum::{
-    async_trait,
     extract::{Extension, FromRequestParts},
     http::{header::SET_COOKIE, request::Parts, HeaderName, HeaderValue, StatusCode},
     response::{IntoResponse, Redirect, Response},
@@ -10,7 +9,7 @@ use axum_extra::{
     headers::{authorization::Basic, Authorization},
     TypedHeader,
 };
-use rand::distributions::{Alphanumeric, DistString};
+use rand::distr::{Alphanumeric, SampleString};
 use sqlx::PgPool;
 use std::env;
 
@@ -23,7 +22,6 @@ fn to_internal_server_error<E>(_: E) -> Response {
     StatusCode::INTERNAL_SERVER_ERROR.into_response()
 }
 
-#[async_trait]
 impl<S> FromRequestParts<S> for UserKey
 where
     S: Send + Sync,
@@ -94,7 +92,7 @@ pub async fn new_session_cookie_header(
     user_key: UserKey,
     pool: &PgPool,
 ) -> InternalResult<(HeaderName, HeaderValue)> {
-    let session_token = Alphanumeric.sample_string(&mut rand::thread_rng(), 64);
+    let session_token = Alphanumeric.sample_string(&mut rand::rng(), 64);
 
     sqlx::query!(
         "INSERT INTO session_tokens(token, user_key) VALUES ($1, $2)",
